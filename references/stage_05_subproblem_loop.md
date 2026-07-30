@@ -491,7 +491,7 @@ python <skill>/scripts/score_artifact.py \
 回复数字。
 ```
 
-非 block verdict 再由 agent **问用户一次**确认 (Claude Code: AskUserQuestion; Codex CLI: 编号列表):
+非 block verdict 再由 agent **问用户一次**确认 (AskUserQuestion):
 
 ```
 【Stage 5 聚合完成: verdict=refine_partial, Q2 需 refine, Q1/Q3 已 pass】

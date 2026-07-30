@@ -246,4 +246,4 @@ L2 触发: 末尾跨阶段回检 stage 3 的模型选择前提是否被本节结
 - evaluation.limitations_real (stage 7 dim 2) → patterns §8 + anti_patterns §H
 - evaluation.real_critique → patterns §8
 
-字数、图表数和公式数不作为官方硬阈值。CUMCM 的 `empirical.json` 记录 91 份来源中的 59 份可提取子集，只能用于异常提示。MCM/ICM 与电工杯的 `empirical.json` 均为无语料结构占位，不得引用其中数值。若 critique 提供 `evidence_metrics`，`score_artifact.py` 会打印可用的分位比较；它不会据此自动改分或把样本观察当作官方阈值。
+字数、图表数和公式数不作为官方硬阈值。CUMCM 的 `empirical.json` 记录 91 份来源中的 59 份可提取子集，只能用于异常提示。若 critique 提供 `evidence_metrics`，`score_artifact.py` 会打印可用的分位比较；它不会据此自动改分或把样本观察当作官方阈值。

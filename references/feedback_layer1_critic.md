@@ -135,8 +135,6 @@ if iter == 3 and verdict in ("refine", "refine_partial"): → 标记 carryover, 
 当前边界：
 
 - CUMCM：来源清单 91 份，其中 59 份进入文本提取统计；解析可能漏计或重复计数。
-- MCM/ICM：`empirical.json` 是无语料占位，不得引用其中任何数值。
-- 电工杯：`empirical.json` 是无语料占位，不得引用其中任何数值。
 
 加载门槛：
 
@@ -163,11 +161,11 @@ abstract_chars: 当前值=720；59 份可提取样本 p50=992、p25-p75=[748,114
 | 3_formulas_figures_citations | figure_count | 数量不代表证据质量 |
 | 3_formulas_figures_citations | reference_count | 当前提取可能统计重复引用，不等于条目数 |
 
-MCM/ICM 与电工杯的占位文件只用于保持包结构完整。Critic 应直接依据题目、官方规则和 artifact 证据评分，不输出占位分位或估算区间。
+Critic 应直接依据题目、官方规则和 artifact 证据评分，不输出占位分位或估算区间。
 
 ### 3.6. 题型加权协议 (task_type dim weights)
 
-`decision_log.task_type` 由 stage 1 选题后填入 (e.g. `A_optimization` / `C_data` / `mcm:F_policy`)。`score_artifact.py` 加载 `config/dim_weights.json[competition][task_type]` 拿到 stage→dim→weight 表, 应用到 verdict 计算。
+`decision_log.task_type` 由 stage 1 选题后填入 (e.g. `A_optimization` / `C_data`)。`score_artifact.py` 加载 `config/dim_weights.json[cumcm][task_type]` 拿到 stage→dim→weight 表, 应用到 verdict 计算。
 
 **critic prompt 扩展** (在 stage 评分时, prompt 模板自动附加):
 ```

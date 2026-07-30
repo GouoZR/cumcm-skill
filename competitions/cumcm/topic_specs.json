@@ -5,7 +5,7 @@
   "duration_h": 72,
   "team_size": 3,
   "language": "zh-CN",
-  "compiler": "xelatex",
+  "output_format": "markdown",
   "default_subproblem_count": null,
   "subproblem_count_iqr": null,
   "topics": {

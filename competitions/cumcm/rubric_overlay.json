@@ -31,8 +31,8 @@
         "1_anti_pattern_coverage": {
           "describe": "对照 competitions/cumcm/anti_patterns.md 42 条逐条核查；该清单是维护者启发式，不是官方评分线"
         },
-        "5_pdf_compile_clean": {
-          "describe": "xelatex 三编 0 error 0 warning, 字符越界检查"
+        "5_docx_assembly_clean": {
+          "describe": "pandoc Markdown→DOCX 无报错, 章节编号完整, 图表不越界"
         }
       }
     }
@@ -49,6 +49,6 @@
   "winning_patterns_path": "competitions/cumcm/winning_patterns.md",
   "abstract_template_path": "competitions/cumcm/abstract_template.md",
   "paper_skeleton_path": "competitions/cumcm/paper_skeleton.md",
-  "latex_template_dir": "templates/latex/cumcm",
+  "paper_skeleton_format": "markdown",
   "citation_format": "按当届科技论文规范；仓库默认建议 GB/T 7714"
 }
