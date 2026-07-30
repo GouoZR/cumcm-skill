@@ -21,11 +21,12 @@ import base64
 import json
 import os
 import sys
+sys.stdout.reconfigure(encoding="utf-8")
 from pathlib import Path
 
 import httpx
 
-BASE_URL = os.environ.get("PACKYAPI_BASE_URL", "https://www.packyai.ai")
+BASE_URL = os.environ.get("PACKYAPI_BASE_URL", "https://www.packyapi.com")
 TOKEN = os.environ.get("PACKYAPI_TOKEN", "")
 
 # 学术概念图 prompt 前缀 — 确保风格统一、可黑白印刷
@@ -70,7 +71,6 @@ def generate_image(
         "size": size,
         "quality": quality,
         "output_format": output_format,
-        "response_format": "b64_json",
     }
 
     try:
@@ -106,7 +106,13 @@ def generate_image(
             return {"success": False, "path": output_path, "url": None, "error": f"响应中无图片数据: {data}"}
 
     except httpx.HTTPError as e:
-        return {"success": False, "path": output_path, "url": None, "error": str(e)}
+        detail = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                detail += f" | body: {e.response.text[:300]}"
+            except Exception:
+                pass
+        return {"success": False, "path": output_path, "url": None, "error": detail}
     except Exception as e:
         return {"success": False, "path": output_path, "url": None, "error": str(e)}
 
@@ -135,7 +141,7 @@ def batch_generate(prompts_file: str, output_dir: str, **kwargs) -> list[dict]:
             academic_style=item.get("academic_style", True),
         )
         results.append(result)
-        status = "✅" if result["success"] else "❌"
+        status = "[OK]" if result["success"] else "[FAIL]"
         print(f"{status} {item['filename']}: {result.get('error', 'OK')}")
 
     return results
@@ -176,9 +182,9 @@ def main():
             academic_style=not args.no_academic,
         )
         if result["success"]:
-            print(f"✅ 图片已保存: {result['path']}")
+            print(f"[OK] 图片已保存: {result['path']}")
         else:
-            print(f"❌ 生成失败: {result['error']}")
+            print(f"[FAIL] 生成失败: {result['error']}")
             sys.exit(1)
     else:
         parser.print_help()
