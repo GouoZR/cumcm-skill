@@ -6,12 +6,11 @@
 
 ### `doctor.py` — 环境与包结构预检
 
-在启动工作流或切换竞赛时运行。默认同时检查 skill 结构、竞赛包、JSON 配置和本地渲染工具；`--skip-tools` 适合 CI 或只做静态检查。
+在启动工作流时运行。检查 skill 结构、竞赛包、JSON 配置和本地工具；`--skip-tools` 适合只做静态检查。
 
 ```bash
 python scripts/doctor.py --competition cumcm --workspace /path/to/project
-python scripts/doctor.py --competition mcm --skip-tools --json
-python scripts/doctor.py --competition diangong --require-renderer --require-modeling
+python scripts/doctor.py --competition cumcm --skip-tools --json
 ```
 
 ### `score_artifact.py` — L1 Critic 结果处理
@@ -56,33 +55,31 @@ python scripts/extract_diff.py \
   > /path/to/project/paper_workspace/06_models_v1.md
 ```
 
-### `render_paper.py` — Markdown 章节装配与 LaTeX 编译
+### `render_paper.py` — [已废弃]
 
-把 `paper_workspace/` 中的编号 Markdown 章节装入所选竞赛的 `main.tex`。三类模板统一使用显式 section marker；正式编译要求 Pandoc 和对应 LaTeX 引擎，并在必需的 `01`–`10` 章节缺失、为空，或 marker 缺失、重复、未知时停止。内置简化转换器只用于 `--no-compile` 结构预检。
+v7.0 起不再使用。输出管线已改为 `cat *.md > paper.md → pandoc → paper.docx`。本文件保留作历史参考。
 
-正式渲染还会检查提交元数据：CUMCM 要求最终题目和关键词，MCM/ICM 要求控制号、题号、题目和关键词，电工杯要求报名序号、题号、题目和关键词。CLI 参数优先于 `decision_log.paper_metadata`；`XXXX`、`X`、`keyword1` 等占位值会阻断编译。只有显式组合 `--allow-placeholders --no-compile` 才会生成带醒目标记的结构预览。
+### `generate_concept_image.py` — gpt-image-2 学术概念图
 
-CUMCM 模板按 2026 电子论文基线提供 A4、四边 2.5 cm、第一页摘要、无目录、正文最多 30 页和匿名字段最小化等 guard；它是仓库原创装配模板，不是官方模板，仍须在 Stage 0 与 Stage 9 重新核对当届通知。
+通过 PackyAPI 调用 gpt-image-2 生成学术概念图（系统架构图、算法流程图等）。
 
 ```bash
-python scripts/render_paper.py \
-  --workspace /path/to/project/paper_workspace \
-  --competition cumcm \
-  --decision-log /path/to/project/state/decision_log.json \
-  --output-dir /path/to/project/paper_output
+# 单张生成
+python scripts/generate_concept_image.py \
+  --prompt "系统架构图，展示数据流从输入到输出的完整链路" \
+  --output figures/system_arch.png
 
-# 只检查模板装配，不编译 PDF
-python scripts/render_paper.py \
-  --workspace /path/to/project/paper_workspace \
-  --competition mcm \
-  --output-dir /path/to/project/paper_output \
-  --no-compile \
-  --allow-placeholders
+# 批量生成
+python scripts/generate_concept_image.py \
+  --batch prompts.json \
+  --output-dir figures/
 ```
+
+需设置 `PACKYAPI_TOKEN` 环境变量。
 
 ### `render_ai_usage.py` — AI 使用记录导出
 
-从 `decision_log.compliance.ai_usage` 生成竞赛要求的披露材料，并直接放到渲染器约定的位置。CUMCM 使用 AI 时输出到 `support_materials/AI工具使用详情.{md,pdf}`；显式未使用时只输出 `paper_workspace/AI工具未使用声明.md`，渲染器把它接在参考文献后。MCM 输出 `paper_workspace/11_ai_use_report.md`，且不重复模板提供的标题。CUMCM 的 PDF 生成依赖 ReportLab。
+从 `decision_log.compliance.ai_usage` 生成竞赛要求的披露材料。使用 AI 时输出到 `support_materials/AI工具使用详情.{md,pdf}`；显式未使用时只输出 `paper_workspace/AI工具未使用声明.md`，接到参考文献后。PDF 生成依赖 ReportLab。
 
 ```bash
 python scripts/render_ai_usage.py \
