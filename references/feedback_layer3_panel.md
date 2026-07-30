@@ -88,7 +88,7 @@ Check whether a fast reader can identify the problem, method, quantified result,
 
 ### Competition-specific reader
 
-Use the fifth persona from the active overlay: CUMCM fast-read clarity, MCM stakeholder communication when required, or Diangong engineering feasibility. For an MCM problem without a policy letter/memo, replace the `policy` persona with an independent reproducibility reader at weight `1.0`.
+Use the fifth persona from the active overlay: CUMCM fast-read clarity.
 
 ## Aggregation
 

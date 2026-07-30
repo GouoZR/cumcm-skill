@@ -7,7 +7,7 @@ inputs:
   - "stage.3.selected_per_subproblem"
 outputs:
   - "stage.4.{assumptions, symbols, terminology, consistency_check}"
-loads_reference: ["references/rubrics.md§Stage_4", "competitions/<comp>/anti_patterns.md§B"]
+loads_reference: ["references/rubrics.md§Stage_4", "competitions/cumcm/anti_patterns.md§B"]
 loads_template: ["templates/shared/assumption_table.md", "templates/shared/notation_table.md"]
 feedback: ["L1"]
 next: stage_05_subproblem_loop
@@ -163,4 +163,4 @@ A1: <模型实际依赖的假设>
 ## 与 stage 5/8 的衔接
 
 stage 5 建模时,任何用到的符号必须先在本文表中。
-stage 8 写论文 §3 §4 时,直接复用本文产出；若需参考经验模式，按竞赛读取 `competitions/<comp>/winning_patterns.md` 并核验其证据边界。
+stage 8 写论文 §3 §4 时,直接复用本文产出；若需参考经验模式，按竞赛读取 `competitions/cumcm/winning_patterns.md` 并核验其证据边界。

@@ -9,7 +9,9 @@ outputs:
 loads_reference:
   - "references/model_catalog.md"
   - "references/rubrics.md§Stage_3"
-  - "competitions/<comp>/winning_patterns.md§4"
+  - "competitions/cumcm/winning_patterns.md§4"
+  - "references/algorithms/README.md"
+  - "references/sciverse_guide.md§Stage_3"
 loads_template: ["templates/shared/code_starter/<problem_type>.py"]
 feedback: ["L1", "counterfactual_exploration_in_championship"]
 next: stage_04_foundation

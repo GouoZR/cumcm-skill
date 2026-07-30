@@ -10,7 +10,7 @@ outputs:
   - "stage.5.sub_problems.{Qi}.{model_name, math_formulation_path, code_path, results_path, figures, key_metrics, physical_meaning_summary, scores, issues, iterations}"
   - "stage.5.cross_reference_chain"
   - "stage.5.assumption_change_history"
-loads_reference: ["references/model_catalog.md", "competitions/<comp>/winning_patterns.md§5", "references/rubrics.md§Stage_5"]
+loads_reference: ["references/model_catalog.md", "competitions/cumcm/winning_patterns.md§5", "references/rubrics.md§Stage_5", "references/algorithms/README.md", "references/sciverse_guide.md§Stage_5"]
 loads_template: ["templates/shared/code_starter/<problem_type>.py"]
 feedback: ["L1_per_Qi", "sub_checkpoint", "L2_at_end_for_stage_3_4_consistency"]
 next: stage_06_robustness
@@ -140,7 +140,7 @@ np.save("results/Q1_x.npy", x_star)
 
 代码要求:
 - 中文注释 (anti_pattern D1)
-- 首行明确 "对应论文 §X" (`competitions/<comp>/winning_patterns.md` §10)
+- 首行明确 "对应论文 §X" (`competitions/cumcm/winning_patterns.md` §10)
 - 设 random seed (anti_pattern D4)
 - `print` 关键状态 (sanity check)
 - 结果保存到 `results/Qi_*.npy` 或 `.csv`

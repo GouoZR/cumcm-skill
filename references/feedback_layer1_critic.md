@@ -32,7 +32,7 @@ elif critique_v0.verdict == "block":
 You are a strict {competition_label} grader for stage {stage_id} ({stage_name}).
 Score the artifact below against the 5-dim rubric.
 
-Competition: {competition} (cumcm | mcm | diangong)
+Competition: {competition} (cumcm)
 Task type: {task_type} (e.g. A_optimization, C_data, F_policy)
 {task_type_weighting_hint}   # 见 §3.6, e.g. "重点考察 X (×1.4), 次要 Y (×0.8)"
 

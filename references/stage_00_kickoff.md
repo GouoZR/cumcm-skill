@@ -8,9 +8,10 @@ outputs:
   - "stage.0.{team_roles, tools_ready, problem_scan, time_budget_h, collab_protocol, checklist_completed}"
   - "root.{competition, task_type}"
 loads_reference:
-  - "competitions/<comp>/current_rules.md"
-  - "competitions/<comp>/topic_specs.json"
-  - "competitions/<comp>/README.md"
+  - "competitions/cumcm/current_rules.md"
+  - "competitions/cumcm/topic_specs.json"
+  - "competitions/cumcm/README.md"
+  - "references/sciverse_guide.md§Stage_0"
 loads_template:
   - "templates/shared/decision_log.json"
   - "templates/shared/requirements.txt"
@@ -63,9 +64,9 @@ next: "stage_01_problem_selection | wait_for_prompt"
 - `decision_log.problem_meta.{year, letter, title, deadline_iso, team_size}` ← 第 2-4 问
 - `decision_log.events.log` ← 第 5 问 (PDF 路径)
 
-先读取 `competitions/<comp>/current_rules.md`，再打开其中的官方来源复核当年规则；仓库内经验值不能覆盖官方通知。Stage 0 不预加载 `winning_patterns.md`：只有后续阶段需要某条经验模式、且能追溯其适用证据时才按需读取，避免把历史启发式误当成当年规则。
+先读取 `competitions/cumcm/current_rules.md`，再打开其中的官方来源复核当年规则；仓库内经验值不能覆盖官方通知。Stage 0 不预加载 `winning_patterns.md`：只有后续阶段需要某条经验模式、且能追溯其适用证据时才按需读取，避免把历史启发式误当成当年规则。
 
-**自动推断** (基于 competition 字段, 加载 `competitions/<comp>/README.md` 与 `topic_specs.json`):
+**自动推断** (基于 competition 字段, 加载 `competitions/cumcm/README.md` 与 `topic_specs.json`):
 - 时长预算 (cumcm 72h / mcm 96h / diangong 72h)
 - 写作语言 (cumcm/diangong 中文 / mcm 英文)
 - LaTeX 编译器 (cumcm/diangong xelatex / mcm pdflatex)
@@ -73,7 +74,7 @@ next: "stage_01_problem_selection | wait_for_prompt"
 
 题面未公布或尚未读取时，`problem_scan.subproblem_count` 与 `stages.5.qi_count` 保持 `null`；不得用历史题目或 `topic_specs.json` 猜默认子问数。
 
-`task_type` 字段在 stage 1 选定题号后再填 (`competitions/<comp>/topic_specs.json` 给出 `<letter> → task_type_key` 映射)。
+`task_type` 字段在 stage 1 选定题号后再填 (`competitions/cumcm/topic_specs.json` 给出 `<letter> → task_type_key` 映射)。
 
 ### Step 2: 角色分工 (10 min)
 
@@ -85,7 +86,7 @@ next: "stage_01_problem_selection | wait_for_prompt"
 | **编程主** | stage 5 求解、stage 6 灵敏度 | 建模主 |
 | **写作主** | stage 8 主导,stage 1/9 协助 | 全员 |
 
-**反模式 J1** (`competitions/<comp>/anti_patterns.md`): "人人都负责一切，实际无人主责" — 拒绝。
+**反模式 J1** (`competitions/cumcm/anti_patterns.md`): "人人都负责一切，实际无人主责" — 拒绝。
 每位真实队员写一句"我对这道题/这个角色的最大顾虑是什么"。
 
 ### Step 3: 工具就绪 checklist (15 min)

@@ -2,15 +2,14 @@
 stage: 9
 name: review
 duration_h: 2-6
-inputs: ["paper.tex", "paper.pdf", "decision_log_full", "decision_log.competition"]
+inputs: ["paper.md", "paper.docx", "decision_log_full"]
 outputs:
-  - "stage.9.{anti_patterns_check, compliance_checks, panel_scores, weakest_section, redo_log, red_team_record, final_pdf_path, submission_ready}"
+  - "stage.9.{anti_patterns_check, compliance_checks, panel_scores, weakest_section, redo_log, red_team_record, submission_ready}"
 loads_reference:
-  - "competitions/<comp>/current_rules.md"
-  - "competitions/<comp>/anti_patterns.md"
-  - "competitions/<comp>/rubric_overlay.json"
+  - "competitions/cumcm/current_rules.md"
+  - "competitions/cumcm/anti_patterns.md"
+  - "competitions/cumcm/rubric_overlay.json"
   - "references/feedback_layer3_panel.md"
-loads_template: ["templates/latex/<comp>/"]
 feedback: ["L1", "L3_panel", "red_team_in_championship"]
 next: SUBMIT
 ---
@@ -21,7 +20,7 @@ The final gate is compliance first, content consistency second, presentation thi
 
 ## 1. Re-open the official rules
 
-Read `competitions/<comp>/current_rules.md`, open its official links, and compare the final artifacts against the current contest year. Record the check in `decision_log.stages.9.compliance_checks`.
+Read `competitions/cumcm/current_rules.md`, open its official links, and compare the final artifacts against the current contest year. Record the check in `decision_log.stages.9.compliance_checks`.
 
 Minimum branches:
 
@@ -57,7 +56,7 @@ Any unresolved rule violation sets `submission_ready=false` and yields `block`.
 
 ## 2. Run the active anti-pattern checklist
 
-Read `competitions/<comp>/anti_patterns.md` and derive the count from the active file rather than copying a remembered or example count.
+Read `competitions/cumcm/anti_patterns.md` and derive the count from the active file rather than copying a remembered or example count.
 
 These are maintainer heuristics, not official scoring weights. Fix high-severity hits; record accepted medium-risk items with an explicit rationale.
 
