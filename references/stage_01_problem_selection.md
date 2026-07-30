@@ -12,7 +12,8 @@ outputs:
 loads_reference:
   - "references/rubrics.md§Stage_1"
   - "references/model_catalog.md§0"
-  - "competitions/<comp>/topic_specs.json"
+  - "competitions/cumcm/topic_specs.json"
+  - "references/sciverse_guide.md§Stage_1"
 feedback: ["L1"]
 next: stage_02_analysis
 ---
@@ -25,9 +26,9 @@ next: stage_02_analysis
 
 ## 目标
 
-在题号体系内 (cumcm A-E / mcm A-F / diangong A-B), 选出**最契合团队优势 + 时间预算 + 数据可获取性**的一题，并让选择、否决与后续变更都有据可查。
+在 CUMCM 题号体系内 (A-E), 选出**最契合团队优势 + 时间预算 + 数据可获取性**的一题，并让选择、否决与后续变更都有据可查。
 
-**第一步必做**: 加载 `competitions/<comp>/topic_specs.json` 获取本竞赛的题号清单与每题 `task_type_key`; 选定后写 `decision_log.task_type` (供 stage 3+ 的 dim_weights 加权)。
+**第一步必做**: 加载 `competitions/cumcm/topic_specs.json` 获取题号清单与每题 `task_type_key`; 选定后写 `decision_log.task_type` (供 stage 3+ 的 dim_weights 加权)。
 
 ---
 
@@ -50,17 +51,19 @@ next: stage_02_analysis
 ### Step 0: 加载竞赛题号体系 (5 min, 必做)
 
 ```bash
-# 路径: <skill>/competitions/<comp>/topic_specs.json
-# 加载后得到本竞赛的题号清单 (cumcm A-E / mcm A-F / diangong A-B) 与每题的 task_type_key
+# 路径: <skill>/competitions/cumcm/topic_specs.json
+# 加载后得到 CUMCM 题号清单 (A-E) 与每题的 task_type_key
 ```
 
 题号体系总览 (引用 `topic_specs.json`):
 
-| Competition | 题号 | 默认子问数 | 主要类型 |
-|---|---|---|---|
-| cumcm | A 优化, B 评价, C 数据, D 工业, E 创新 | 3-5 | 中文论文 |
-| mcm   | A 连续, B 离散, C 数据, D-F 跨学科方向 | 3-6 | 英文 + 当年题目明确要求的特殊交付物 |
-| diangong | A 电力工程, B 能源数据 | 6-8 | 中文工程 |
+| 题号 | 默认子问数 | 主要类型 |
+|------|-----------|---------|
+| A | 3-5 | 优化类 |
+| B | 3-5 | 评价类 |
+| C | 3-5 | 数据类 |
+| D | 3-5 | 工业/工程类 |
+| E | 3-5 | 创新/开放类 |
 
 ### Step 1: 候选题信息提取 (45 min,可并行)
 
@@ -81,6 +84,23 @@ next: stage_02_analysis
 - 类型: 优化类 + 预测类
 - 类似题: `<有已核验来源时填写，否则写未检索到>`
 ```
+
+### Step 1.5: Sciverse 文献辅助选题 (20 min, 可选)
+
+> 详见 `references/sciverse_guide.md` §Stage 1
+
+为每道候选题目搜 3-5 篇相关文献辅助判断:
+
+```
+对每题:
+  agentic_search: "<题核心问题> mathematical model solution"
+  agentic_search: "<题核心问题> dataset benchmark"
+  meta_search: 该领域近年论文数量趋势
+```
+
+输出: 每题附 3-5 条文献摘要 (标题 + 方法 + 关键发现), 辅助 Step 2 评分。
+
+**离线预案**: 若 Sciverse 不可用, 跳过本步, 不影响后续流程。
 
 ### Step 2: 5 维对比矩阵 (30 min)
 
@@ -107,7 +127,7 @@ next: stage_02_analysis
 
 ### Step 4: 决策与锁定 (15 min) — 问答式
 
-**呈现给用户** (Claude Code: AskUserQuestion; Codex CLI: 编号列表):
+**呈现给用户** (AskUserQuestion):
 
 ```
 【基于 5 维对比矩阵, 推荐选题】
