@@ -43,7 +43,114 @@ next: stage_06_robustness
 
 ---
 
-## 递归循环结构
+## 求解模式
+
+本阶段支持两种模式，冠军模式默认并行:
+
+| 模式 | 说明 | 适用 |
+|------|------|------|
+| **串行 (Serial)** | Q1→Q2→Q3 依次求解，下游复用上游结果 | fast / standard |
+| **并行 (Parallel)** | 所有 Qi 同时求解，文献 Agent 并行检索 | championship |
+
+用户可通过 "并行求解" / "串行求解" 切换。
+
+---
+
+## 多 Agent 并行架构 (Championship)
+
+### Agent 分工
+
+```
+主 Agent (本 Agent — 协调 + 跨 Qi 一致性)
+  │
+  ├── 求解 Agent 1 → Q1 完整 mini-pipeline (A→G)
+  │     输入: stage 2-4 相关部分, model_catalog.md, algorithms/
+  │     输出: Q1 数学模型 + 代码 + 结果 + 图 + decision_log 节点
+  │
+  ├── 求解 Agent 2 → Q2 完整 mini-pipeline (A→G)
+  │     输入: stage 2-4 相关部分 + Q1 接口(如需)
+  │     输出: Q2 数学模型 + 代码 + 结果 + 图 + decision_log 节点
+  │
+  ├── 求解 Agent 3 → Q3 完整 mini-pipeline (A→G)
+  │     输入: stage 2-4 相关部分 + Q1/Q2 接口(如需)
+  │     输出: Q3 数学模型 + 代码 + 结果 + 图 + decision_log 节点
+  │
+  └── 文献 Agent → Sciverse 文献检索
+        输入: 各求解 Agent 的检索需求
+        输出: 各 Qi 相关文献摘要 + doc_id (可溯源)
+        工具: Sciverse MCP (agentic_search + meta_search)
+```
+
+### 分派协议
+
+```python
+# 主 Agent 执行流程
+
+# Step 1: 识别 Qi 间依赖关系
+deps = analyze_qi_dependencies(stage_2.subproblem_cards)
+# 例: Q2 需要 Q1 的 x_star → Q2 depends on Q1
+# 例: Q3 独立 → Q3 无依赖
+
+# Step 2: 并行启动独立 Qi + 文献检索
+results = parallel([
+    # 求解 Agent 1: Q1 (无上游依赖)
+    lambda: agent(
+        prompt=f"求解 CUMCM Q1: {qi1_description}...",
+        context_files=[
+            "references/stage_05_subproblem_loop.md §A-G",
+            "references/model_catalog.md",
+            "references/algorithms/ (对应 task_type)",
+            "competitions/cumcm/winning_patterns.md §5",
+            "decision_log (stages.2-4)"
+        ],
+        output_files=["results/Q1_*", "figures/Q1_*"],
+        schema=QI_RESULT_SCHEMA
+    ),
+
+    # 求解 Agent 2: Q2 (如有上游依赖, 等待 Q1 结果)
+    lambda: agent(
+        prompt=f"求解 CUMCM Q2: {qi2_description}...",
+        context_files=[...] + (q1_result if deps.q2_depends_on_q1 else []),
+        output_files=["results/Q2_*", "figures/Q2_*"],
+        schema=QI_RESULT_SCHEMA
+    ),
+
+    # 求解 Agent 3: Q3 (独立)
+    lambda: agent(
+        prompt=f"求解 CUMCM Q3: {qi3_description}...",
+        context_files=[...],
+        output_files=["results/Q3_*", "figures/Q3_*"],
+        schema=QI_RESULT_SCHEMA
+    ),
+
+    # 文献 Agent: 并行检索 (优先级: Q1 > Q2 > Q3)
+    lambda: agent(
+        prompt="Sciverse 检索各 Qi 相关文献...",
+        context_files=["references/sciverse_guide.md §Stage_5"],
+        output_files=["results/Qi_literature.json"],
+        tools=["Sciverse MCP"]
+    )
+])
+
+# Step 3: 主 Agent 做跨 Qi 一致性检查 (H)
+cross_check(results)
+```
+
+### 串行回退
+
+当用户选择串行模式或 Qi 间存在强依赖时:
+
+```
+for Qi in [Q1, Q2, ..., Qn]:
+    1. 单 Agent 跑 A→G
+    2. 子检查点 H
+    3. 文献检索 (如需)
+    4. 写入 decision_log
+```
+
+---
+
+## 递归循环结构 (串行/单 Agent 回退)
 
 ```
 for Qi in [Q1, Q2, ..., Qn]:
