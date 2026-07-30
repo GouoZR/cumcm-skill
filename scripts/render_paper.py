@@ -1,21 +1,12 @@
 """
-render_paper.py — markdown 中间产物 → 最终 PDF (v3.1 三竞赛版)
+[DEPRECATED] render_paper.py — cumcm-skill v7.0 起不再使用。
 
-功能:
-1. 读 stage 8 各节 markdown 产出 (<cwd>/paper_workspace/)
-2. 按 competition 选择 LaTeX 模板与编译器:
-   - cumcm:    templates/latex/cumcm/main.tex      + xelatex
-   - mcm:      templates/latex/mcm/main.tex        + pdflatex
-   - diangong: templates/latex/diangong/main.tex   + xelatex (中文)
-3. md → tex (正式编译使用 Pandoc；手工正则只供 structural dry-run)
-4. 三编生成 PDF
+v7.0 输出管线已改为 Markdown → pandoc → DOCX, 不再需要 LaTeX 模板渲染。
+本文件保留作为历史参考，不参与当前工作流。用户应当:
+  1. 在 paper_workspace/ 中 cat 所有 .md 文件组装 paper.md
+  2. 用 pandoc 转换: pandoc paper.md -o paper.docx --number-sections
 
-用法:
-    python <skill>/scripts/render_paper.py --competition cumcm --workspace paper_workspace/
-    python scripts/render_paper.py --competition mcm --workspace ws/ --output-dir out/ \
-      --control-number 1234567 --problem A --title "Paper Title" \
-      --keywords "optimization, robustness, simulation"
-    python scripts/render_paper.py --competition diangong --workspace ws/ --no-compile  (dry-run)
+如需检查组装完整性，使用 doctor.py 替代。
 """
 
 import argparse

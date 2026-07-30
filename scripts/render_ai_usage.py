@@ -33,14 +33,11 @@ non-conversational use may instead contain one plain-language ``disclosure``.
 Ledger order is retained as chronological order.  An explicit empty list means
 that no AI-assisted tool was used; a missing path is treated as an error.
 
-Outputs are placed where the paper renderer expects them:
+Outputs are placed where expected:
   * cumcm with AI use: ``support_materials/AI工具使用详情.{md,pdf}``
   * cumcm without AI use: ``paper_workspace/AI工具未使用声明.md``
-  * mcm: ``paper_workspace/11_ai_use_report.md``
 
-ReportLab is imported only for the CUMCM PDF, so the MCM path has no external
-Python dependency.  Use ``--markdown-only`` to inspect CUMCM Markdown without
-creating the PDF.
+Use ``--markdown-only`` to inspect CUMCM Markdown without creating the PDF.
 """
 
 from __future__ import annotations

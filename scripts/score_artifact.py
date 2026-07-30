@@ -1,9 +1,9 @@
 """
-score_artifact.py — L1 Critic 输出后的本地处理脚本 (v3.1 三竞赛版)
+score_artifact.py — L1 Critic 输出后的本地处理脚本 (v3.1)
 
 功能:
 1. 读取 critique JSON
-2. 验证 schema (5 维 + verdict + dim key 白名单, 含竞赛 overlay)
+2. 验证 schema (5 维 + verdict + dim key 白名单)
 3. 决定下一步: block / pass_early / pass / pass_with_review / refine / refine_partial / carryover
 4. 写入 <cwd>/state/decision_log.scores
 5. 格式化并打印 empirical 比较（不修改 critique）
@@ -11,13 +11,12 @@ score_artifact.py — L1 Critic 输出后的本地处理脚本 (v3.1 三竞赛�
 7. Stage 5 per-Qi 加权聚合 (compute_stage5_verdict)
 
 路径协议:
-- decision_log: 默认 <cwd>/state/decision_log.json, 可用 MATHMODEL_STATE_DIR (兼容老 CUMCM_STATE_DIR) 或 --decision-log 覆盖
-- competition: 默认从 decision_log.competition 读, 缺失则 cumcm; 可用 --competition 或 MATHMODEL_COMPETITION env 覆盖
+- decision_log: 默认 <cwd>/state/decision_log.json, 可用 CUMCM_STATE_DIR 或 --decision-log 覆盖
+- competition: 固定 cumcm
 - task_type: 默认从 decision_log.task_type 读, null 则 default 全 1.0; 可用 --task-type 覆盖
 
 用法:
     python scripts/score_artifact.py --stage 1 --critique state/critique_v0.json
-    python scripts/score_artifact.py --competition mcm --task-type A_continuous --stage 3 --critique c.json
     # stage 5 per-Qi 评分:
     python scripts/score_artifact.py --stage 5 --variant per_qi --qi-id Q1 --critique critique_q1_v0.json
     # stage 5 多 Qi 聚合:
@@ -40,7 +39,7 @@ VALID_VERDICTS = {
 }
 
 VALID_VARIANTS = {"stage_level", "per_qi"}
-COMPETITIONS = {"cumcm", "mcm", "diangong"}
+COMPETITIONS = {"cumcm"}
 
 # Baseline DIM_WHITELIST (cumcm-flavored; 其他竞赛通过 rubric_overlay.json dim_whitelist 覆盖)
 DIM_WHITELIST = {

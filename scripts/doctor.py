@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
-COMPETITIONS = ("cumcm", "mcm", "diangong")
+COMPETITIONS = ("cumcm",)
 COMPETITION_FILES = (
     "README.md",
     "winning_patterns.md",
@@ -28,12 +28,7 @@ COMPETITION_FILES = (
     "empirical.json",
     "current_rules.md",
 )
-RENDER_ENGINES = {"cumcm": "xelatex", "mcm": "pdflatex", "diangong": "xelatex"}
-REQUIRED_TEX_FILES = {
-    "cumcm": ("ctexart.cls",),
-    "mcm": (),
-    "diangong": ("ctexart.cls",),
-}
+OUTPUT_FORMAT = "markdown"
 MODELING_MODULES = ("numpy", "scipy", "pandas", "matplotlib", "sklearn")
 CORE_SECTION_MARKERS = {
     "abstract",
@@ -49,8 +44,6 @@ CORE_SECTION_MARKERS = {
 }
 EXPECTED_RENDER_MARKERS = {
     "cumcm": CORE_SECTION_MARKERS | {"cumcm_no_ai_statement"},
-    "mcm": CORE_SECTION_MARKERS | {"ai_use_report"},
-    "diangong": CORE_SECTION_MARKERS,
 }
 
 
@@ -125,18 +118,12 @@ def run_checks(
     required_paths = (
         "SKILL.md",
         "AGENTS.md",
-        "agents/openai.yaml",
-        ".codex-plugin/plugin.json",
         "config/dim_weights.json",
         "templates/shared/decision_log.json",
         "scripts/score_artifact.py",
         "scripts/extract_diff.py",
-        "scripts/render_paper.py",
         "scripts/render_ai_usage.py",
         "templates/shared/ai_usage_ledger.json",
-        "templates/latex/cumcm/main.tex",
-        "templates/latex/mcm/main.tex",
-        "templates/latex/diangong/main.tex",
     )
     missing = [item for item in required_paths if not (SKILL_ROOT / item).is_file()]
     checks.append(_check(
@@ -146,11 +133,10 @@ def run_checks(
     ))
 
     skill_name = _frontmatter_name(SKILL_ROOT / "SKILL.md")
-    shim_name = _frontmatter_name(SKILL_ROOT / "skills" / "mathmodel-skill" / "SKILL.md")
     checks.append(_check(
         "skill-metadata",
-        skill_name == "mathmodel-skill" and shim_name == "mathmodel-skill",
-        f"root={skill_name!r}, plugin-shim={shim_name!r}",
+        skill_name == "cumcm-skill",
+        f"root={skill_name!r}",
     ))
 
     json_paths = [

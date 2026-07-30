@@ -3,8 +3,8 @@
   "_doc": "跨阶段决策日志。每个阶段开头读、结尾写。L2 回检读此文件寻找跨阶段冲突。schema 与 stage_NN.md 实际写入字段一一对齐。v3.1 加入规则核对、AI 使用台账与最终论文元数据。",
   "competition": "cumcm",
   "task_type": null,
-  "_competition_doc": "enum: cumcm | mcm | diangong (默认 cumcm 兼容老用户). 由 stage 0 kickoff 第一问填入。score_artifact.py / stage 文件按此字段 dispatch competitions/<comp>/* 加载。",
-  "_task_type_doc": "题型代码 (e.g. cumcm:A_optimization, mcm:A_continuous, diangong:A_engineering). 由 stage 1 选题后填入。score_artifact.py 用此字段查 config/dim_weights.json。null 时使用 default 全 1.0 权重 = 等价老逻辑。",
+  "_competition_doc": "固定为 cumcm。score_artifact.py / stage 文件按此字段 dispatch competitions/cumcm/* 加载。",
+  "_task_type_doc": "题型代码 (e.g. A_optimization, C_data). 由 stage 1 选题后填入。score_artifact.py 用此字段查 config/dim_weights.json[cumcm]。null 时使用 default 全 1.0 权重。",
   "problem": null,
   "problem_meta": {
     "year": null,
@@ -14,9 +14,7 @@
     "team_size": null
   },
   "paper_metadata": {
-    "_doc": "最终渲染元数据。CUMCM 要求 title/keywords；MCM 要求 mcm_control_number/problem/title/keywords；电工杯要求 diangong_registration_number/problem/title/keywords。CLI 显式参数可覆盖这些值。不得填写 XXXX、X、TITLE OF YOUR PAPER、keyword1、关键词1 等占位符。",
-    "mcm_control_number": null,
-    "diangong_registration_number": null,
+    "_doc": "最终论文元数据。CUMCM 要求 title/keywords。不得填写 TITLE OF YOUR PAPER、keyword1、关键词1 等占位符。",
     "problem": null,
     "title": null,
     "keywords": []
