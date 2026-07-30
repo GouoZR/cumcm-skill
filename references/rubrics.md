@@ -1,6 +1,6 @@
 # 评分细则 (rubrics)
 
-> 三竞赛通用 5 维 rubric (国赛 / 美赛 / 电工杯 共享 stage 0-7 框架, stage 8/9 由 `competitions/<comp>/rubric_overlay.json` 特化)。L1 Critic 直接 JSON 化使用。
+> CUMCM 国赛 5 维 rubric。L1 Critic 直接 JSON 化使用。
 
 ---
 
@@ -8,18 +8,16 @@
 
 | 层级 | 来源 | 加载 |
 |------|------|------|
-| 通用基础 | 本文件 stage 0-9 表格 | 三竞赛共享 |
-| 竞赛特化 dim 名 | `competitions/<comp>/rubric_overlay.json` 的 `dim_whitelist` | score_artifact.py 自动合并 |
-| 题型 dim 权重 | `config/dim_weights.json[<comp>][<task_type>]` | compute_verdict 加权 mean |
-| 样本观察 | `competitions/<comp>/empirical.json` | Critic 评分前按竞赛加载；只作参照 |
+| 通用基础 | 本文件 stage 0-9 表格 | 全阶段共享 |
+| 竞赛特化 dim 名 | `competitions/cumcm/rubric_overlay.json` 的 `dim_whitelist` | score_artifact.py 自动合并 |
+| 题型 dim 权重 | `config/dim_weights.json[cumcm][<task_type>]` | compute_verdict 加权 mean |
+| 样本观察 | `competitions/cumcm/empirical.json` | Critic 评分前加载；只作参照 |
 
 `task_type` 由 stage 1 选题后填入 decision_log; null 时 default 全 1.0 等价老逻辑。
 
 ---
 
-## 三竞赛约束与内部质量视角
-
-### CUMCM 国赛（内部启发式，不是官方评分权重）
+## CUMCM 国赛评分维度（内部启发式，不是官方评分权重）
 
 | 维度 | 内部关注度 | 关键检查项 |
 |------|-----|----------|
@@ -28,30 +26,6 @@
 | **求解与结果** | 高 | 算法合理 / 代码可复现 / 结果可视化 / 现实意义 |
 | **写作呈现** | 中 | 章节完整 / 公式编号规范 / 图表清晰 / 语言流畅 |
 | **创新性** | 中 | 真实机制改进 / 跨学科融合 / 合理的子问题复用 |
-
-### MCM/ICM 美赛（官方约束 + 内部质量检查）
-
-> 当前没有可用于统计校准的语料；`competitions/mcm/empirical.json` 只是结构占位，不能把其中数值用于评分。
-
-| 维度 | 关键检查项 |
-|------|----------|
-| **Summary Sheet** | 第 1 页 / 方法与结果可追溯 / 限制诚实 |
-| **Approach & Modeling** | 问题契合 / 假设支撑 / 设计选择有证据 |
-| **Solution & Results** | 算法 / 复现性 / 与模型风险匹配的验证 |
-| **Communication** | 写作清晰 / 图表 self-contained / 术语精确 |
-| **Problem-specific deliverable** | 仅题目明确要求时加入 / 面向目标读者 / 保留证据与 caveat |
-
-### 电工杯（内部工程质量检查）
-
-> 当前没有可用于统计校准的语料；`competitions/diangong/empirical.json` 只是结构占位，不能把其中数值用于评分。
-
-| 维度 | 关键检查项 |
-|------|----------|
-| **工程实用性** | 落地可行 / 适用时的成本估算 / 实施条件 |
-| **物理意义** | 数值带 kW/kWh/% / 工程语义 |
-| **数据完整性** | 关键字段可追溯 / 未用字段说明取舍 / 预处理有据 |
-| **多场景对比** | 场景覆盖主要工程风险 / 参数扰动有现实依据 |
-| **写作呈现** | 引用格式按当年规则 / 工程惯用图表 / 单位与图例完整 |
 
 ---
 

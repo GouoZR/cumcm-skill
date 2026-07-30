@@ -9,8 +9,9 @@
 | 时长 | 72 小时 (3 天) |
 | 队员 | 3 人 (建模 / 编程 / 写作) |
 | 语言 | 中文 |
-| LaTeX 编译器 | xelatex |
-| LaTeX 模板 | `templates/latex/cumcm/main.tex`（仓库原创电子论文装配模板） |
+| 输出格式 | Markdown → pandoc → DOCX (用户自转 PDF) |
+| 概念图 | gpt-image-2 (PackyAPI) |
+| 数据图 | matplotlib / plotly |
 | 引用格式 | 按科技论文规范；仓库默认建议 GB/T 7714，提交前以当届要求为准 |
 | 题号 | A / B / C / D / E (近年 F 并入 B) |
 | 子问题数 | 只从当届题面提取；未知时保持 `null`，不预设数量 |
@@ -55,5 +56,5 @@
 ## 与 references/ 通用层的关系
 
 - `references/stage_NN_*.md` 在加载本目录文件时, 通过 `decision_log.competition` 字段 dispatch
-- 通用模型清单 `references/model_catalog.md` 跨竞赛复用
+- 通用模型清单 `references/model_catalog.md` 跨 task_type 复用
 - 反馈层 `references/feedback_layer*.md` 通用；L1 critic 在需要经验锚点或异常提示时读取本目录的 `empirical.json`，不把样本分位当成官方门槛
