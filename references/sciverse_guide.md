@@ -21,11 +21,11 @@ claude mcp add -s user sciverse -- npx -y sciverse-mcp-server
 ```
 
 安装后，在 Claude Code 中可直接调用 Sciverse 的 MCP 工具:
-- `agentic_search` — 语义搜索，返回带引用的证据片段
-- `meta_search` — 结构化元数据搜索
-- `content` — 按 doc_id 读原文片段
-- `meta_paper_relations` — 论文引用关系网络
-- `resource` — 获取论文图片/表格
+- `semantic_search` — 语义搜索，返回带引用的证据片段
+- `search_papers` — 结构化元数据搜索
+- `read_content` — 按 doc_id 读原文片段
+- `list_paper_relations` — 论文引用关系网络
+- `get_resource` — 获取论文图片/表格
 
 ### 方式 2: Python SDK (求解代码中使用)
 
@@ -53,21 +53,21 @@ r = httpx.post(f"{BASE}/agentic-search", json={
 
 | API | MCP 工具名 | 用途 | 数模竞赛场景 |
 |-----|-----------|------|------------|
-| **agentic-search** | `agentic_search` | 自然语言 → 带引用的原文证据片段 | ⭐ 最常用: 搜类似题目解法、模型对比 |
-| **meta-search** | `meta_search` | 作者/年份/期刊/引用数等结构化筛选 | 找经典文献、高引论文 |
-| **meta-catalog** | `meta_catalog` | 查询可用筛选字段 | 了解能搜什么维度 |
-| **meta-paper-relations** | `meta_paper_relations` | 论文引用关系网络 | 滚雪球检索: 从一篇关键论文扩展开 |
-| **content** | `content` | 按 doc_id + offset 读原文片段 | 核验 agentic-search 返回的证据 |
-| **resource** | `resource` | 获取论文图片/表格 | 查看方法流程图、结果对比表 |
+| **semantic_search** | `semantic_search` | 自然语言 → 带引用的原文证据片段 | ⭐ 最常用: 搜类似题目解法、模型对比 |
+| **search_papers** | `search_papers` | 作者/年份/期刊/引用数等结构化筛选 | 找经典文献、高引论文 |
+| **list_catalog** | `list_catalog` | 查询可用筛选字段 | 了解能搜什么维度 |
+| **list_paper_relations** | `list_paper_relations` | 论文引用关系网络 | 滚雪球检索: 从一篇关键论文扩展开 |
+| **read_content** | `read_content` | 按 doc_id + offset 读原文片段 | 核验 semantic_search 返回的证据 |
+| **get_resource** | `get_resource` | 获取论文图片/表格 | 查看方法流程图、结果对比表 |
 
 ### 典型调用链
 
 ```
 场景: 搜"物流配送路径优化的最新方法"
-  → agentic_search("logistics vehicle routing optimization 2024")
+  → semantic_search("logistics vehicle routing optimization 2024")
   → 返回带引用的证据 chunks + doc_id
   → 对关键 chunk 调 content(doc_id, offset) 扩展上下文
-  → 对感兴趣的方法调 meta_paper_relations(doc_id) 找更多相关工作
+  → 对感兴趣的方法调 list_paper_relations(doc_id) 找更多相关工作
 ```
 
 ---
@@ -90,9 +90,9 @@ r = httpx.post(f"{BASE}/agentic-search", json={
 
 对每个候选题目:
 ```
-agentic_search: "<题A核心问题> solution approach"
-agentic_search: "<题B核心问题> benchmark dataset"
-meta_search: 搜该领域近年论文数量趋势 (判断热度)
+semantic_search: "<题A核心问题> solution approach"
+semantic_search: "<题B核心问题> benchmark dataset"
+search_papers: 搜该领域近年论文数量趋势 (判断热度)
 ```
 
 输出: 每个候选题目附 3-5 篇相关文献摘要，辅助选题决策。
@@ -102,9 +102,9 @@ meta_search: 搜该领域近年论文数量趋势 (判断热度)
 **用途**: 搜每个候选模型的竞赛/学术应用案例，验证可行性。
 
 ```
-agentic_search: "<模型名> application <问题类型>"
-agentic_search: "<模型名> vs <替代模型> comparison"
-agentic_search: "<模型名> implementation Python"
+semantic_search: "<模型名> application <问题类型>"
+semantic_search: "<模型名> vs <替代模型> comparison"
+semantic_search: "<模型名> implementation Python"
 ```
 
 输出: 每个候选模型附 2-3 篇应用文献，填入选型决策矩阵的"文献支持"维度。
@@ -114,9 +114,9 @@ agentic_search: "<模型名> implementation Python"
 **用途**: 文献 Agent 并行检索各 Qi 相关文献，搜特定技术细节、参数设置、算法改进。
 
 ```
-agentic_search: "<方法> hyperparameter tuning"
-agentic_search: "<方法> convergence analysis"
-agentic_search: "<方法> improved version 改进"
+semantic_search: "<方法> hyperparameter tuning"
+semantic_search: "<方法> convergence analysis"
+semantic_search: "<方法> improved version 改进"
 content: 对关键方法的原文细节进行核验
 ```
 
@@ -125,7 +125,7 @@ content: 对关键方法的原文细节进行核验
 ### Stage 6 — 灵敏度分析
 
 ```
-agentic_search: "sensitivity analysis <模型类型> Sobol Morris LHS"
+semantic_search: "sensitivity analysis <模型类型> Sobol Morris LHS"
 ```
 
 ### Stage 8 — 参考文献 (最重要)
@@ -133,7 +133,7 @@ agentic_search: "sensitivity analysis <模型类型> Sobol Morris LHS"
 **用途**: 文献 Agent 核验所有引用 + 补充检索 ≥10 条真实参考文献 (GB/T 7714 格式)。
 
 ```
-meta_search: 按关键词 + 年份 + 期刊筛选
+search_papers: 按关键词 + 年份 + 期刊筛选
   → 返回完整元数据 (作者/标题/期刊/卷期/页码)
   → 自动格式化为 GB/T 7714
 ```
@@ -150,13 +150,13 @@ meta_search: 按关键词 + 年份 + 期刊筛选
 
 ```
 # 中英混合检索
-agentic_search: "无人机 烟幕干扰 UAV smoke interference optimization"
+semantic_search: "无人机 烟幕干扰 UAV smoke interference optimization"
 
 # 纯英文 (更全)
-agentic_search: "crop planting optimization robust multi-objective"
+semantic_search: "crop planting optimization robust multi-objective"
 
 # 找中文文献 (知网等)
-agentic_search: "农作物种植 多目标优化 鲁棒"
+semantic_search: "农作物种植 多目标优化 鲁棒"
 # 注意: Sciverse 以英文文献为主, 中文覆盖较少
 ```
 
@@ -172,7 +172,7 @@ agentic_search: "农作物种植 多目标优化 鲁棒"
 
 1. 同一主题多轮检索 → 按 doc_id 去重 (记录到 decision_log.sciverse_queries)
 2. 优先 OA (开放获取) 论文 (content API 可读全文)
-3. 优先高引论文 (meta_search 按 citations 排序)
+3. 优先高引论文 (search_papers 按 citations 排序)
 4. 核验: 关键证据调 content API 读原文确认
 5. 文献 Agent 在 Stage 8 对所有引用执行核验
 
@@ -191,7 +191,7 @@ agentic_search: "农作物种植 多目标优化 鲁棒"
 **速率限制应对**:
 - 不要对同一 query 反复调用 (结果缓存到 decision_log)
 - 批量检索优于逐个检索
-- 优先 agentic_search (一次获取多个相关结果)
+- 优先 semantic_search (一次获取多个相关结果)
 - 多 Agent 并行时，文献 Agent 独占 Sciverse 调用，避免竞争
 
 ---

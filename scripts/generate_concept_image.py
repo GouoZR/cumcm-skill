@@ -3,7 +3,7 @@
 
 环境变量:
     PACKYAPI_TOKEN: PackyAPI Bearer Token (必需)
-    PACKYAPI_BASE_URL: 默认 https://www.packyapi.com
+    PACKYAPI_BASE_URL: 默认 https://www.packyai.ai
 
 用法:
     python generate_concept_image.py \
@@ -25,7 +25,7 @@ from pathlib import Path
 
 import httpx
 
-BASE_URL = os.environ.get("PACKYAPI_BASE_URL", "https://www.packyapi.com")
+BASE_URL = os.environ.get("PACKYAPI_BASE_URL", "https://www.packyai.ai")
 TOKEN = os.environ.get("PACKYAPI_TOKEN", "")
 
 # 学术概念图 prompt 前缀 — 确保风格统一、可黑白印刷
