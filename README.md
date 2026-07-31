@@ -71,11 +71,11 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 | `README.md` | 本文件 | 新会话了解全貌 |
 | `LICENSE` | MIT 许可证 | — |
 
-### competitions/cumcm/ — 国赛特化层（13 个文件）
+### competitions/cumcm/ — 国赛特化层（15 个文件）
 
 | 文件 | 用途 | 关键信息 |
 |------|------|---------|
-| `README.md` | 国赛基本信息（时长/语言/题号体系） | 72h，中文，A-E题 |
+| `README.md` | 国赛基本信息（时长/语言/题号体系） | 72h，中文，A-F 题号路由（有效题号以当届题面为准） |
 | `current_rules.md` | 2026 当届官方规则链接 | Stage 0/9 必读，核对不失效 |
 | `topic_specs.json` | 题号 → task_type 映射 | Stage 1 选题路由 |
 | `winning_patterns.md` | 获奖论文写作模式 | Stage 8 写作锚点 |
@@ -127,9 +127,10 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 | `writing/章节模板.md` | 各章节详细模板 | 每节写什么、怎么写 |
 | `writing/自审框架.md` | 提交前自审清单 | Stage 8/9 逐项检查 |
 | `writing/论文格式规范.md` | Word/PDF 格式规范 | DOCX 输出格式要求 |
-| `tools/docx/` | DOCX 转换工具 | Markdown → DOCX 辅助 |
 
-### scripts/ — 工具脚本（6 个活跃 + 2 个废弃）
+Markdown → DOCX 转换由系统 Pandoc 完成（见 `stage_08_writing.md` §8 与 `references/writing/论文格式规范.md`）；不依赖仓库内模板目录。
+
+### scripts/ — 工具脚本（5 个活跃 + 3 个维护用）
 
 | 脚本 | 状态 | 用途 |
 |------|------|------|
@@ -138,7 +139,6 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 | `extract_diff.py` | ✅ 活跃 | Section-level diff，定向精修 |
 | `render_ai_usage.py` | ✅ 活跃 | 生成 AI 使用披露文件 |
 | `generate_concept_image.py` | ✅ v7.0 新增 | gpt-image-2 概念图生成（PackyAPI） |
-| `render_paper.py` | ⚠️ 已废弃 | v6.1 LaTeX 装配脚本，v7.0 不再使用 |
 | `download_cumcm_papers.py` | 📦 维护用 | 下载官方展廊论文（非竞赛时使用） |
 | `ingest_papers.py` | 📦 维护用 | 论文文本提取和统计（非竞赛时使用） |
 | `requirements-maintenance.txt` | 📦 维护用 | 维护工具依赖 |
@@ -147,7 +147,7 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 
 | 目录 | 内容 | 用途 |
 |------|------|------|
-| `config/dim_weights.json` | CUMCM A-E 题型加权配置 | score_artifact.py 加权用 |
+| `config/dim_weights.json` | CUMCM 题型加权配置 (A-E; 题型以当届为准) | score_artifact.py 加权用 |
 | `templates/shared/` | decision_log / 代码模板 / 表格模板 | 各阶段初始化时复制 |
 | `state/` | .gitkeep | 运行时状态目录（用户项目下） |
 | `tests/` | Python 测试套件 | 维护时验证不破坏功能 |
@@ -202,20 +202,16 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 ### 当前限制
 
 - **MCM/电工杯已移除**：如需其他竞赛，fork 上游 mathmodel-skill v6.1.0 从头定制
-- **scripts 目录未全清**：`render_paper.py` 已标记废弃但仍保留 600+ 行 LaTeX 代码
-- **tests 未全适配**：测试文件仍包含 MCM/diangong 引用，需重写
-- **stage_00/02/06/07/09 body**：部分正文仍有竞赛选择、LaTeX 编译器等残留描述
-- **decision_log.json**：虽已清理 MCM/diangong 字段，但 `paper_metadata` 和部分注释仍需核对
+- **多 Agent/Sciverse 编排未经自动化测试**：`stage_05_subproblem_loop.md`、`stage_08_writing.md` 中的并行 Agent 分发和文献检索是指令级描述（由运行中的 agent 解释执行），没有对应的自动化测试覆盖其实际行为
 - **概念图质量**：gpt-image-2 对中文标注支持不稳定，需测试优化 prompt
+- **未做完整 10 阶段真题模拟**：尚未用往年真题走完整条流水线验证实际痛点
 
 ### 建议后续打磨方向
 
 1. **完整走一遍流程**：用往年真题（如 2024 C 题）模拟完整 10 阶段，发现实际痛点
 2. **优化概念图 prompt**：针对学术论文场景提炼最佳 prompt 模板
 3. **算法库与 model_catalog 联动**：确保算法推荐逻辑和参考文献一致
-4. **重写测试套件**：适配单竞赛 CUMCM 场景
-5. **stage 文件 body 彻底清理**：去除所有 LaTeX/Codex/MCM 残留
-6. **config/dim_weights.json**：根据更多实际求解经验调整题型权重
+4. **config/dim_weights.json**：根据更多实际求解经验调整题型权重
 
 ---
 
@@ -235,8 +231,8 @@ python scripts/generate_concept_image.py \
 # 4. Sciverse MCP（在 Claude Code 中）
 # "用 Sciverse 搜一篇关于 NSGA-II 的论文"
 
-# 5. 完整测试（需先修复测试文件）
-# python -m unittest discover -s tests -p 'test_*.py' -v
+# 5. 完整测试
+python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
 ---

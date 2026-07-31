@@ -3,10 +3,8 @@
 
 from __future__ import annotations
 
-import contextlib
 import copy
 import importlib.util
-import io
 import json
 import math
 import os
@@ -37,7 +35,6 @@ def load_script(name: str):
 doctor = load_script("doctor")
 extract_diff = load_script("extract_diff")
 render_ai_usage = load_script("render_ai_usage")
-render_paper = load_script("render_paper")
 score_artifact = load_script("score_artifact")
 
 
@@ -47,36 +44,17 @@ def load_fixture(filename: str) -> dict:
     )
 
 
-def write_required_paper_workspace(workspace: Path) -> None:
-    workspace.mkdir(parents=True, exist_ok=True)
-    for section, filename in render_paper.SECTION_TO_FILE.items():
-        content = f"Rendered {section}.\n" if section == "abstract" else (
-            f"# {section}\n\nRendered {section}.\n"
-        )
-        (workspace / filename).write_text(content, encoding="utf-8")
-
-
 class PackageIntegrityTests(unittest.TestCase):
-    def test_all_json_and_yaml_files_parse(self) -> None:
+    def test_all_json_files_parse(self) -> None:
         json_paths = sorted(
             path for path in ROOT.rglob("*.json")
             if ".git" not in path.parts
         )
-        yaml_paths = sorted(
-            path for pattern in ("*.yaml", "*.yml")
-            for path in ROOT.rglob(pattern)
-            if ".git" not in path.parts
-        )
 
         self.assertTrue(json_paths)
-        self.assertTrue(yaml_paths)
         for path in json_paths:
             with self.subTest(path=path.relative_to(ROOT)):
                 json.loads(path.read_text(encoding="utf-8"))
-        for path in yaml_paths:
-            with self.subTest(path=path.relative_to(ROOT)):
-                parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
-                self.assertIsNotNone(parsed)
 
     def test_all_stage_frontmatters_are_valid_yaml(self) -> None:
         stages = []
@@ -97,7 +75,7 @@ class PackageIntegrityTests(unittest.TestCase):
         self.assertEqual(stages, list(range(10)))
 
     def test_anti_pattern_counts_and_deferred_state(self) -> None:
-        expected = {"cumcm": 42, "mcm": 16, "diangong": 12}
+        expected = {"cumcm": 42}
         pattern = re.compile(r"^###\s+([A-Z]\d+)\.\s", re.MULTILINE)
 
         for competition, count in expected.items():
@@ -151,31 +129,11 @@ class ScoreArtifactTests(unittest.TestCase):
         self.assertTrue(ok, message)
 
     def test_existing_competition_and_empirical_fixtures(self) -> None:
-        cases = (
-            ("mcm_smoke.json", "mcm", "A_continuous", "pass"),
-            ("diangong_smoke.json", "diangong", "A_engineering", "refine"),
-        )
-        for filename, competition, task_type, expected_verdict in cases:
-            with self.subTest(filename=filename):
-                critique = load_fixture(filename)
-                ok, message = score_artifact.validate_critique(
-                    critique, critique["stage_id"], competition
-                )
-                self.assertTrue(ok, message)
-                weights = score_artifact.load_dim_weights_table(
-                    competition, task_type
-                ).get(str(critique["stage_id"]), {})
-                self.assertEqual(
-                    score_artifact.compute_verdict(critique, weights),
-                    expected_verdict,
-                )
-
-        diangong = score_artifact.load_empirical("diangong")
-        self.assertEqual(diangong["source"]["papers_total"], 0)
-        self.assertEqual(diangong["dims"], {})
+        empirical = score_artifact.load_empirical("nonexistent_competition")
+        self.assertEqual(empirical, {})
         self.assertIn(
-            "不在 empirical 字段",
-            score_artifact.inject_evidence("abstract_chars", 700, diangong),
+            "empirical 数据缺失",
+            score_artifact.inject_evidence("abstract_chars", 700, empirical),
         )
 
         empirical_fixture = load_fixture("cumcm_empirical_inject.json")
@@ -509,154 +467,6 @@ class ScoreArtifactTests(unittest.TestCase):
                     )
 
 
-class RenderPaperTests(unittest.TestCase):
-    def write_ai_log(self, root: Path, competition: str, entries: list) -> Path:
-        path = root / "state" / "decision_log.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            json.dumps(
-                {"competition": competition, "compliance": {"ai_usage": entries}},
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
-        )
-        return path
-
-    def test_mcm_without_ai_report_removes_the_entire_optional_block(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            temp_path = Path(temp)
-            workspace = temp_path / "paper_workspace"
-            output = temp_path / "paper_output"
-            write_required_paper_workspace(workspace)
-
-            with contextlib.redirect_stdout(io.StringIO()):
-                main_path, _ = render_paper.fill_template(
-                    "mcm", workspace, output, prefer_pandoc=False
-                )
-
-            main_text = main_path.read_text(encoding="utf-8")
-            self.assertIsNone(render_paper.SECTION_MARKER_RE.search(main_text))
-            self.assertNotIn("Report on Use of AI", main_text)
-            self.assertNotIn(r"\input{sections/ai_use_report}", main_text)
-            self.assertFalse((output / "sections" / "ai_use_report.tex").exists())
-            for section in render_paper.SECTION_TO_FILE:
-                self.assertIn(rf"\input{{sections/{section}}}", main_text)
-
-    def test_mcm_generated_ai_report_is_wired_without_duplicate_heading(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            temp_path = Path(temp)
-            workspace = temp_path / "paper_workspace"
-            output = temp_path / "paper_output"
-            support = temp_path / "support_materials"
-            write_required_paper_workspace(workspace)
-            decision_log = self.write_ai_log(temp_path, "mcm", [])
-            report = render_ai_usage.render_reports(
-                decision_log, workspace, support, "mcm"
-            )[0]
-            self.assertNotIn("# Report on Use of AI", report.read_text(encoding="utf-8"))
-
-            with contextlib.redirect_stdout(io.StringIO()):
-                main_path, _ = render_paper.fill_template(
-                    "mcm", workspace, output, prefer_pandoc=False
-                )
-
-            main_text = main_path.read_text(encoding="utf-8")
-            self.assertEqual(main_text.count(r"\section*{Report on Use of AI}"), 1)
-            self.assertIn(r"\input{sections/ai_use_report}", main_text)
-            report_tex = (output / "sections" / "ai_use_report.tex").read_text(
-                encoding="utf-8"
-            )
-            self.assertNotIn(r"\section{Report on Use of AI", report_tex)
-
-    def test_diangong_template_wires_all_ten_markers(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            temp_path = Path(temp)
-            workspace = temp_path / "paper_workspace"
-            output = temp_path / "paper_output"
-            write_required_paper_workspace(workspace)
-
-            with contextlib.redirect_stdout(io.StringIO()):
-                main_path, _ = render_paper.fill_template(
-                    "diangong", workspace, output, prefer_pandoc=False
-                )
-
-            main_text = main_path.read_text(encoding="utf-8")
-            self.assertIsNone(render_paper.SECTION_MARKER_RE.search(main_text))
-            for section in render_paper.SECTION_TO_FILE:
-                self.assertIn(rf"\input{{sections/{section}}}", main_text)
-
-    def test_cumcm_no_ai_statement_is_inserted_after_references(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            temp_path = Path(temp)
-            workspace = temp_path / "paper_workspace"
-            output = temp_path / "paper_output"
-            support = temp_path / "support_materials"
-            write_required_paper_workspace(workspace)
-            decision_log = self.write_ai_log(temp_path, "cumcm", [])
-            outputs = render_ai_usage.render_reports(
-                decision_log, workspace, support, "cumcm"
-            )
-            self.assertEqual(
-                outputs, [workspace / render_ai_usage.CUMCM_NO_USE_FILENAME]
-            )
-            self.assertFalse(support.exists())
-
-            with contextlib.redirect_stdout(io.StringIO()):
-                main_path, _ = render_paper.fill_template(
-                    "cumcm", workspace, output, prefer_pandoc=False
-                )
-
-            main_text = main_path.read_text(encoding="utf-8")
-            statement = "本参赛队未使用任何 AI 工具。"
-            statement_input = r"\input{sections/cumcm_no_ai_statement}"
-            statement_tex = output / "sections" / "cumcm_no_ai_statement.tex"
-            self.assertTrue(statement_tex.is_file())
-            self.assertIn(statement, statement_tex.read_text(encoding="utf-8"))
-            self.assertIn(statement_input, main_text)
-            self.assertLess(
-                main_text.index(r"\input{sections/8_references}"),
-                main_text.index(statement_input),
-            )
-            self.assertLess(main_text.index(statement_input), main_text.index(r"\appendix"))
-
-    def test_cumcm_without_no_ai_statement_removes_optional_block(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            temp_path = Path(temp)
-            workspace = temp_path / "paper_workspace"
-            output = temp_path / "paper_output"
-            write_required_paper_workspace(workspace)
-
-            with contextlib.redirect_stdout(io.StringIO()):
-                main_path, _ = render_paper.fill_template(
-                    "cumcm",
-                    workspace,
-                    output,
-                    prefer_pandoc=False,
-                    allow_placeholders=True,
-                )
-
-            main_text = main_path.read_text(encoding="utf-8")
-            self.assertNotIn("MATHMODEL:OPTIONAL cumcm_no_ai_statement", main_text)
-            self.assertNotIn(r"\input{sections/cumcm_no_ai_statement}", main_text)
-            self.assertFalse(
-                (output / "sections" / "cumcm_no_ai_statement.tex").exists()
-            )
-            for section in render_paper.SECTION_TO_FILE:
-                self.assertIn(rf"\input{{sections/{section}}}", main_text)
-
-    def test_missing_required_workspace_section_fails_closed(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            temp_path = Path(temp)
-            workspace = temp_path / "paper_workspace"
-            write_required_paper_workspace(workspace)
-            (workspace / "06_models.md").unlink()
-
-            with self.assertRaisesRegex(FileNotFoundError, "06_models.md"):
-                render_paper.fill_template(
-                    "mcm", workspace, temp_path / "out", prefer_pandoc=False
-                )
-
-
 class ExtractDiffTests(unittest.TestCase):
     def test_apply_mode_does_not_require_critique(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -708,7 +518,7 @@ class ExtractDiffTests(unittest.TestCase):
 
 
 class DoctorTests(unittest.TestCase):
-    def test_all_three_competition_preflights_pass(self) -> None:
+    def test_all_competition_preflights_pass(self) -> None:
         for competition in doctor.COMPETITIONS:
             with self.subTest(competition=competition):
                 checks = doctor.run_checks(competition, check_tools=False)
@@ -718,18 +528,6 @@ class DoctorTests(unittest.TestCase):
                     if item.status == "fail"
                 ]
                 self.assertEqual(failures, [])
-
-    def test_mcm_doctor_expects_ai_report_marker(self) -> None:
-        checks = doctor.run_checks("mcm", check_tools=False)
-        marker_check = next(item for item in checks if item.name == "render-markers")
-        self.assertEqual(marker_check.status, "pass")
-        self.assertEqual(marker_check.detail, "mcm: 11/11 section markers")
-
-    def test_cumcm_doctor_expects_no_ai_statement_marker(self) -> None:
-        checks = doctor.run_checks("cumcm", check_tools=False)
-        marker_check = next(item for item in checks if item.name == "render-markers")
-        self.assertEqual(marker_check.status, "pass")
-        self.assertEqual(marker_check.detail, "cumcm: 11/11 section markers")
 
     def test_workspace_state_requires_v31_and_matching_competition(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -741,11 +539,11 @@ class DoctorTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            state["competition"] = "mcm"
+            state["competition"] = "cumcm"
             state_path.write_text(json.dumps(state), encoding="utf-8")
 
             checks = doctor.run_checks(
-                "mcm", workspace=workspace, check_tools=False
+                "cumcm", workspace=workspace, check_tools=False
             )
             workspace_check = next(
                 item for item in checks if item.name == "workspace-state"
@@ -753,18 +551,17 @@ class DoctorTests(unittest.TestCase):
             self.assertEqual(workspace_check.status, "pass")
 
             mismatch = doctor.run_checks(
-                "cumcm", workspace=workspace, check_tools=False
+                "other_competition", workspace=workspace, check_tools=False
             )
             mismatch_check = next(
                 item for item in mismatch if item.name == "workspace-state"
             )
             self.assertEqual(mismatch_check.status, "fail")
 
-            state["competition"] = "mcm"
             state["current_stage"] = True
             state_path.write_text(json.dumps(state), encoding="utf-8")
             boolean_stage = doctor.run_checks(
-                "mcm", workspace=workspace, check_tools=False
+                "cumcm", workspace=workspace, check_tools=False
             )
             boolean_check = next(
                 item for item in boolean_stage if item.name == "workspace-state"
@@ -777,7 +574,7 @@ class DoctorTests(unittest.TestCase):
                 sys.executable,
                 str(ROOT / "scripts" / "doctor.py"),
                 "--competition",
-                "mcm",
+                "cumcm",
                 "--skip-tools",
                 "--require-renderer",
             ],
@@ -795,27 +592,25 @@ class DoctorTests(unittest.TestCase):
 
         with mock.patch.object(doctor.shutil, "which", side_effect=fake_which):
             checks = doctor.run_checks(
-                "mcm", check_tools=True, require_renderer=True
+                "cumcm", check_tools=True, require_renderer=True
             )
 
         pandoc_check = next(item for item in checks if item.name == "pandoc")
         self.assertEqual(pandoc_check.status, "fail")
         self.assertIn("formal compilation is unavailable", pandoc_check.detail)
 
-    def test_require_renderer_detects_missing_competition_tex_support(self) -> None:
-        with (
-            mock.patch.object(doctor.shutil, "which", return_value="/usr/bin/tool"),
-            mock.patch.object(doctor, "_tex_file_available", return_value=False),
-        ):
-            checks = doctor.run_checks(
-                "cumcm", check_tools=True, require_renderer=True
-            )
 
-        support_check = next(
-            item for item in checks if item.name == "latex-support"
+class DecisionLogSchemaTests(unittest.TestCase):
+    def test_dynamic_counts_and_unobservable_token_usage_default_to_null(self) -> None:
+        state = json.loads(
+            (ROOT / "templates" / "shared" / "decision_log.json").read_text(
+                encoding="utf-8"
+            )
         )
-        self.assertEqual(support_check.status, "fail")
-        self.assertIn("ctexart.cls", support_check.detail)
+        self.assertIsNone(state["budget"]["tokens_used"])
+        self.assertIsNone(state["budget"]["tokens_cap"])
+        self.assertIsNone(state["stages"]["9"]["anti_patterns_check"]["total"])
+        self.assertIn("paper_metadata", state)
 
 
 if __name__ == "__main__":

@@ -22,9 +22,7 @@ The final gate is compliance first, content consistency second, presentation thi
 
 Read `competitions/cumcm/current_rules.md`, open its official links, and compare the final artifacts against the current contest year. Record the check in `decision_log.stages.9.compliance_checks`.
 
-Minimum branches:
-
-### CUMCM
+Minimum checklist:
 
 - electronic paper starts with the abstract page;
 - no commitment form, numbering page, table of contents, or identity information;
@@ -33,24 +31,6 @@ Minimum branches:
 - support ZIP/RAR contains runnable code and required evidence, is within the size limit, and excludes secrets;
 - AI-assisted content is marked and cited;
 - if AI was used, support materials contain `AI工具使用详情.pdf`; otherwise the required no-AI declaration is present.
-
-### MCM/ICM
-
-- Summary Sheet is page 1;
-- main solution, including references, appendices, code, TOC, and required letter/memo, is at most 25 pages;
-- readable font is at least 12pt;
-- each solution page has the control number and page number, with no personal or institutional identity;
-- AI tools are cited in the main solution;
-- `Report on Use of AI` follows the main solution and is not counted inside the 25-page solution.
-
-### Diangong
-
-- page 1 is the anonymous cover with registration number and the official problem title; page 2 contains title, abstract and keywords and begins Arabic page numbering at 1;
-- the body begins on page 3, contains no table of contents and stays within the current 25-page body limit; appendices follow the body;
-- A4 margins are 2.5 cm and Chinese body text uses 小四; no team-member or school identity appears anywhere;
-- the paper is a single uncompressed PDF or Word file, while support materials are ZIP/RAR no larger than 20 MB and contain the runnable code and necessary evidence;
-- citations appear in the text and references follow citation order;
-- the currently checked official pages do not define a dedicated AI-disclosure format, so recheck the annual notice and preserve the ledger rather than inventing one.
 
 Any unresolved rule violation sets `submission_ready=false` and yields `block`.
 
@@ -76,8 +56,8 @@ Cross-check the final paper against `decision_log.json` and the saved artifacts:
 - labels, units, legends, equations, and captions remain readable at final PDF size;
 - fonts and colors are consistent and accessible;
 - tables use consistent units and precision;
-- there are no unresolved `??` references, missing glyphs, clipped figures, or large overfull boxes;
-- all required sections are present in the compiled PDF, not merely on disk as detached `.tex` files.
+- there are no unresolved `??` references, missing glyphs, clipped figures, or broken page breaks;
+- all required sections are present in the assembled `paper.docx`, not merely on disk as detached `paper_workspace/*.md` files.
 
 ## 5. Run the five-view panel
 
@@ -87,21 +67,21 @@ Map every high-severity concern back to one source section and apply a targeted 
 
 ## 6. Generate AI disclosure artifacts
 
-For CUMCM or MCM, run from the user project root:
+Run from the user project root:
 
 ```bash
 python <skill>/scripts/render_ai_usage.py \
-  --competition <competition> \
+  --competition cumcm \
   --decision-log state/decision_log.json \
   --paper-workspace paper_workspace/ \
   --support-dir support_materials/
 ```
 
-For CUMCM with AI use, verify `support_materials/AI工具使用详情.pdf` is in the supporting archive and that inline marks and AI-tool references are present. For an explicit empty CUMCM ledger, the helper instead creates `paper_workspace/AI工具未使用声明.md`; rerender and verify that the declaration appears immediately after the references, with no details PDF. For MCM, verify `paper_workspace/11_ai_use_report.md` is rendered once, after the 25-page main solution. The helper intentionally does not invent a Diangong disclosure format; for Diangong, compare the ledger with the current official notice and record that manual check.
+With AI use, verify `support_materials/AI工具使用详情.pdf` is in the supporting archive and that inline marks and AI-tool references are present. For an explicit empty ledger, the helper instead creates `paper_workspace/AI工具未使用声明.md`; rerender and verify that the declaration appears immediately after the references, with no details PDF.
 
-## 7. Compile and inspect the final PDF
+## 7. Assemble and inspect the final document
 
-Use `<skill>/scripts/render_paper.py` or the selected LaTeX engine. Compilation succeeds only when the PDF exists, includes all intended sections, and has no unresolved high-severity warnings. Visually inspect the first page, dense equations, wide tables, figure-heavy pages, references, appendices, and the AI report.
+Re-run the Stage 8 assembly (`references/stage_08_writing.md` §8) if any section changed since the last pass: concatenate the approved `paper_workspace/*.md` files into `paper.md`, then convert with pandoc into `paper.docx`. Compilation succeeds only when `paper.docx` exists, includes all intended sections in order, and pandoc reports no unresolved reference/image warnings. Visually inspect the first page, dense equations, wide tables, figure-heavy pages, references, appendices, and the AI disclosure after the user applies the current year's formatting in Word and exports the final submission PDF.
 
 ## 8. Persist the final gate
 
@@ -119,7 +99,8 @@ Write actual runtime-derived counts and paths. The schema is:
     "rules_verified": null,
     "anonymity_passed": null,
     "page_limit_passed": null,
-    "ai_disclosure_passed": null
+    "ai_disclosure_passed": null,
+    "supporting_materials_passed": null
   },
   "final_pdf_path": "paper_output/paper.pdf",
   "submission_ready": null

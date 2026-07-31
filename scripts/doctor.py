@@ -8,7 +8,6 @@ import importlib.util
 import json
 import re
 import shutil
-import subprocess
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -26,25 +25,10 @@ COMPETITION_FILES = (
     "rubric_overlay.json",
     "topic_specs.json",
     "empirical.json",
+    "empirical_notes.md",
     "current_rules.md",
 )
-OUTPUT_FORMAT = "markdown"
 MODELING_MODULES = ("numpy", "scipy", "pandas", "matplotlib", "sklearn")
-CORE_SECTION_MARKERS = {
-    "abstract",
-    "1_problem_restate",
-    "2_problem_analysis",
-    "3_assumptions",
-    "4_notation",
-    "5_models",
-    "6_sensitivity",
-    "7_evaluation",
-    "8_references",
-    "appendix_code",
-}
-EXPECTED_RENDER_MARKERS = {
-    "cumcm": CORE_SECTION_MARKERS | {"cumcm_no_ai_statement"},
-}
 
 
 @dataclass(frozen=True)
@@ -82,20 +66,6 @@ def _frontmatter_name(path: Path) -> str | None:
 def _anti_pattern_count(path: Path) -> int:
     text = path.read_text(encoding="utf-8")
     return len(re.findall(r"^###\s+[A-Z]\d+\.\s", text, re.MULTILINE))
-
-
-def _tex_file_available(filename: str) -> bool:
-    """Ask the active TeX distribution whether a required class/package exists."""
-    kpsewhich = shutil.which("kpsewhich")
-    if not kpsewhich:
-        return False
-    try:
-        result = subprocess.run(
-            [kpsewhich, filename], capture_output=True, text=True, check=False
-        )
-    except OSError:
-        return False
-    return result.returncode == 0 and bool(result.stdout.strip())
 
 
 def run_checks(
@@ -140,7 +110,6 @@ def run_checks(
     ))
 
     json_paths = [
-        SKILL_ROOT / ".codex-plugin" / "plugin.json",
         SKILL_ROOT / "config" / "dim_weights.json",
         SKILL_ROOT / "templates" / "shared" / "decision_log.json",
         SKILL_ROOT / "templates" / "shared" / "ai_usage_ledger.json",
@@ -195,6 +164,19 @@ def run_checks(
         if not missing_comp else f"{competition} missing: {', '.join(missing_comp)}",
     ))
 
+    # 可选资产：distilled_* 为按需加载的模板，缺失仅告警（SKILL.md 加载协议已登记）
+    optional_assets = ("distilled_phrases.md", "distilled_structures.md",
+                       "distilled_naming.md", "distilled_formats.md")
+    missing_optional = [name for name in optional_assets if not (comp_dir / name).is_file()]
+    checks.append(_optional(
+        "optional-assets",
+        not missing_optional,
+        f"{competition}: optional distilled templates present"
+        if not missing_optional else f"{competition} missing optional: {', '.join(missing_optional)}",
+        "Restore the distilled template files or remove their registration from SKILL.md."
+        if missing_optional else None,
+    ))
+
     anti_path = comp_dir / "anti_patterns.md"
     if anti_path.is_file():
         anti_count = _anti_pattern_count(anti_path)
@@ -214,39 +196,6 @@ def run_checks(
             f"template defers total; {competition} source currently has {anti_count}",
             "Keep the shared template total null; Stage 9 initializes it from the active competition pack."
             if declared is not None else None,
-        ))
-
-    if competition in EXPECTED_RENDER_MARKERS:
-        template = SKILL_ROOT / "templates" / "latex" / competition / "main.tex"
-        markers = re.findall(
-            r"^\s*%\s*MATHMODEL:SECTION\s+([A-Za-z0-9_]+)\s*$",
-            template.read_text(encoding="utf-8"),
-            re.MULTILINE,
-        ) if template.is_file() else []
-        expected = EXPECTED_RENDER_MARKERS[competition]
-        actual = set(markers)
-        duplicates = sorted({marker for marker in markers if markers.count(marker) > 1})
-        missing_markers = sorted(expected - actual)
-        unexpected_markers = sorted(actual - expected)
-        markers_ok = (
-            not duplicates
-            and not missing_markers
-            and not unexpected_markers
-            and len(markers) == len(expected)
-        )
-        if markers_ok:
-            marker_detail = f"{competition}: {len(markers)}/{len(expected)} section markers"
-        else:
-            marker_detail = (
-                f"{competition}: missing={missing_markers}, "
-                f"unexpected={unexpected_markers}, duplicates={duplicates}"
-            )
-        checks.append(_check(
-            "render-markers",
-            markers_ok,
-            marker_detail,
-            "Restore the exact unique MATHMODEL section-marker set."
-            if not markers_ok else None,
         ))
 
     if workspace:
@@ -282,29 +231,6 @@ def run_checks(
             ))
 
     if check_tools:
-        engine = RENDER_ENGINES[competition]
-        engine_ok = shutil.which(engine) is not None
-        engine_check = _check if require_renderer else _optional
-        checks.append(engine_check(
-            "latex-engine",
-            engine_ok,
-            f"{engine} {'found' if engine_ok else 'not found'}",
-            f"Install a TeX distribution that provides {engine}." if not engine_ok else None,
-        ))
-        required_tex_files = REQUIRED_TEX_FILES[competition]
-        if required_tex_files:
-            missing_tex_files = [
-                filename for filename in required_tex_files
-                if not _tex_file_available(filename)
-            ]
-            checks.append(engine_check(
-                "latex-support",
-                not missing_tex_files,
-                "required TeX classes/packages found" if not missing_tex_files
-                else f"missing TeX support: {', '.join(missing_tex_files)}",
-                "Install the TeX distribution's Chinese-language/ctex package set."
-                if missing_tex_files else None,
-            ))
         pandoc_ok = shutil.which("pandoc") is not None
         pandoc_check = _check if require_renderer else _optional
         checks.append(pandoc_check(
@@ -344,6 +270,13 @@ def _print_human(checks: list[Check]) -> None:
 
 
 def main() -> int:
+    # Windows 控制台默认 GBK；强制 UTF-8 输出，避免子进程按 utf-8 捕获中文时崩溃。
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError, OSError):
+            pass
+
     parser = argparse.ArgumentParser(description="Check mathmodel-skill readiness.")
     parser.add_argument("--competition", choices=COMPETITIONS, default="cumcm")
     parser.add_argument("--workspace", type=Path, default=None)

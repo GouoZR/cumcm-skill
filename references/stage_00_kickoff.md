@@ -51,7 +51,7 @@ next: "stage_01_problem_selection | wait_for_prompt"
 
 收集以下 4 个启动字段。先合并当前用户消息与已有 state，**只询问尚缺字段**；不要为了凑数重复询问用户已经给出的题号或 PDF 状态。将缺失项合并成一轮 AskUserQuestion：
 
-1. **题号** — 选项: A / B / C / D / E / 未公布
+1. **题号** — 选项: A / B / C / D / E / F / 未公布 (以当届题面实际公布为准)
 2. **队员数与各人擅长** — 自由文本 (例: "3 人, 张建模, 李编程, 王写作")
 3. **截止时间** — 自由文本 (ISO 字符串或 "距现在 X 小时")
 4. **题目 PDF 路径** — 自由文本 ("未公布"亦可)
@@ -95,7 +95,7 @@ next: "stage_01_problem_selection | wait_for_prompt"
 ```bash
 python --version           # ≥ 3.10
 
-# 先运行 skill 自检；按实际竞赛替换 competition
+# 先运行 skill 自检
 python <skill>/scripts/doctor.py --competition cumcm --workspace .
 
 # 完整建模依赖检查 (一次性安装见 templates/shared/requirements.txt)

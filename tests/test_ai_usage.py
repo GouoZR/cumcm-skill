@@ -63,20 +63,20 @@ class AIUsageReportTests(unittest.TestCase):
         )
         return path
 
-    def test_mcm_report_preserves_complete_query_and_output(self) -> None:
-        log = self.write_log("mcm", [self.entry])
+    def test_cumcm_report_preserves_complete_query_and_output(self) -> None:
+        log = self.write_log("cumcm", [self.entry])
         paper_workspace = self.root / "paper_workspace"
         support_dir = self.root / "support_materials"
 
-        outputs = render_ai_usage.render_reports(log, paper_workspace, support_dir)
+        outputs = render_ai_usage.render_reports(
+            log, paper_workspace, support_dir, markdown_only=True
+        )
 
-        self.assertEqual(outputs, [paper_workspace / "11_ai_use_report.md"])
+        self.assertEqual(outputs, [support_dir / "AI工具使用详情.md"])
         report = outputs[0].read_text(encoding="utf-8")
-        self.assertFalse(report.startswith("#"))
-        self.assertNotIn("# Report on Use of AI", report)
         self.assertIn(self.entry["query"], report)
         self.assertIn(self.entry["output"], report)
-        self.assertIn("Human verification and revisions", report)
+        self.assertIn("人工核验与修订", report)
         # The payload contains a triple-backtick run; the outer fence must grow.
         self.assertIn("````text", report)
 
@@ -121,26 +121,18 @@ class AIUsageReportTests(unittest.TestCase):
             "disclosure": "Auto-completions were used while preparing plotting code.",
             "human_review": "The team read, executed, and tested every retained line.",
         }
-        log = self.write_log("mcm", [entry])
+        log = self.write_log("cumcm", [entry])
 
         output = render_ai_usage.render_reports(
-            log, self.root / "paper_workspace", self.root / "support_materials"
+            log,
+            self.root / "paper_workspace",
+            self.root / "support_materials",
+            markdown_only=True,
         )[0]
 
         report = output.read_text(encoding="utf-8")
-        self.assertIn("**Disclosure:**", report)
+        self.assertIn("### 使用说明", report)
         self.assertIn(entry["disclosure"], report)
-
-    def test_explicit_empty_ledger_generates_no_use_statement(self) -> None:
-        log = self.write_log("mcm", [])
-
-        output = render_ai_usage.render_reports(
-            log, self.root / "paper_workspace", self.root / "support_materials"
-        )[0]
-
-        self.assertIn(
-            "did not use generative AI", output.read_text(encoding="utf-8")
-        )
 
     def test_cumcm_empty_ledger_generates_inline_statement_only(self) -> None:
         log = self.write_log("cumcm", [])
@@ -162,7 +154,7 @@ class AIUsageReportTests(unittest.TestCase):
 
     def test_missing_ledger_is_not_silently_treated_as_no_use(self) -> None:
         log = self.root / "decision_log.json"
-        log.write_text(json.dumps({"competition": "mcm"}), encoding="utf-8")
+        log.write_text(json.dumps({"competition": "cumcm"}), encoding="utf-8")
 
         with self.assertRaisesRegex(
             render_ai_usage.LedgerValidationError, "compliance.ai_usage"
@@ -172,7 +164,7 @@ class AIUsageReportTests(unittest.TestCase):
     def test_query_and_output_must_be_recorded_together(self) -> None:
         broken = dict(self.entry)
         broken.pop("output")
-        log = self.write_log("mcm", [broken])
+        log = self.write_log("cumcm", [broken])
 
         with self.assertRaisesRegex(
             render_ai_usage.LedgerValidationError, "必须同时填写"
@@ -182,7 +174,7 @@ class AIUsageReportTests(unittest.TestCase):
     def test_use_stage_is_required(self) -> None:
         broken = dict(self.entry)
         broken.pop("use_stage")
-        log = self.write_log("mcm", [broken])
+        log = self.write_log("cumcm", [broken])
 
         with self.assertRaisesRegex(
             render_ai_usage.LedgerValidationError, "use_stage"
@@ -192,7 +184,7 @@ class AIUsageReportTests(unittest.TestCase):
     def test_interaction_and_disclosure_are_mutually_exclusive(self) -> None:
         broken = dict(self.entry)
         broken["disclosure"] = "A second, ambiguous disclosure path."
-        log = self.write_log("mcm", [broken])
+        log = self.write_log("cumcm", [broken])
 
         with self.assertRaisesRegex(
             render_ai_usage.LedgerValidationError, "不能同时填写"

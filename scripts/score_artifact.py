@@ -741,6 +741,12 @@ def cmd_aggregate_qi(args):
 
 
 def main():
+    # Windows 控制台默认 GBK；强制 UTF-8 输出，避免子进程按 utf-8 捕获中文时崩溃。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError, OSError):
+        pass
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--stage", type=int, help="阶段编号 0-9 (mode=normal/aggregate_qi 必填)")
     parser.add_argument("--critique", type=str, help="critique JSON 文件路径 (mode=normal 必填)")
@@ -752,7 +758,7 @@ def main():
     parser.add_argument("--decision-log", type=str, default=None,
                         help="覆盖路径解析协议; 默认 <cwd>/state/decision_log.json")
     parser.add_argument("--competition", choices=sorted(COMPETITIONS), default=None,
-                        help="cumcm | mcm | diangong (默认从 decision_log 读, 缺失则 cumcm)")
+                        help="cumcm (默认从 decision_log 读, 缺失则 cumcm)")
     parser.add_argument("--task-type", type=str, default=None,
                         help="题型 e.g. A_optimization (默认 default 全 1.0)")
     parser.add_argument("--mode", choices=["normal", "aggregate_qi"], default="normal",

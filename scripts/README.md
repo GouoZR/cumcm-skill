@@ -55,10 +55,6 @@ python scripts/extract_diff.py \
   > /path/to/project/paper_workspace/06_models_v1.md
 ```
 
-### `render_paper.py` — [已废弃]
-
-v7.0 起不再使用。输出管线已改为 `cat *.md > paper.md → pandoc → paper.docx`。本文件保留作历史参考。
-
 ### `generate_concept_image.py` — gpt-image-2 学术概念图
 
 通过 PackyAPI 调用 gpt-image-2 生成学术概念图（系统架构图、算法流程图等）。

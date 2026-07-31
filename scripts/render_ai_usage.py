@@ -56,7 +56,6 @@ from typing import Any, Dict, List, Optional, Sequence
 CUMCM_MARKDOWN_FILENAME = "AI工具使用详情.md"
 CUMCM_PDF_FILENAME = "AI工具使用详情.pdf"
 CUMCM_NO_USE_FILENAME = "AI工具未使用声明.md"
-MCM_MARKDOWN_FILENAME = "11_ai_use_report.md"
 
 REPORTLAB_ERROR = (
     "生成 CUMCM《AI工具使用详情.pdf》需要 ReportLab。"
@@ -233,9 +232,9 @@ def resolve_competition(cli_arg: Optional[str], decision_log: Dict[str, Any]) ->
         or os.environ.get("MATHMODEL_COMPETITION")
         or decision_log.get("competition")
     )
-    if competition not in {"cumcm", "mcm"}:
+    if competition != "cumcm":
         raise LedgerValidationError(
-            "AI 使用报告目前支持 competition='cumcm' 或 'mcm'；"
+            "AI 使用报告目前仅支持 competition='cumcm'；"
             f"当前值为 {competition!r}"
         )
     return str(competition)
@@ -252,15 +251,14 @@ def _fenced_block(text: str, language: str = "text") -> str:
     return f"{fence}{language}\n{text}\n{fence}"
 
 
-def _problem_context(decision_log: Dict[str, Any], chinese: bool) -> str:
+def _problem_context(decision_log: Dict[str, Any]) -> str:
     meta = decision_log.get("problem_meta")
     if not isinstance(meta, dict):
         return ""
     parts = [str(meta.get(key)).strip() for key in ("year", "letter", "title") if meta.get(key)]
     if not parts:
         return ""
-    label = "赛题" if chinese else "Problem"
-    return f"**{label}:** {' · '.join(parts)}\n\n"
+    return f"**赛题:** {' · '.join(parts)}\n\n"
 
 
 def render_cumcm_markdown(
@@ -271,7 +269,7 @@ def render_cumcm_markdown(
             "CUMCM 空台账应生成参考文献后的未使用声明，而不是 AI 工具使用详情"
         )
     lines = ["# 人工智能工具使用详情", ""]
-    context = _problem_context(decision_log, True)
+    context = _problem_context(decision_log)
     if context:
         lines.extend([context.rstrip(), ""])
     lines.extend(
@@ -335,66 +333,6 @@ def render_cumcm_markdown(
 def render_cumcm_no_use_statement() -> str:
     """Return the declaration that must appear immediately after references."""
     return "本参赛队未使用任何 AI 工具。\n"
-
-
-def render_mcm_markdown(
-    entries: Sequence[AIUsageEntry], decision_log: Dict[str, Any]
-) -> str:
-    # The MCM LaTeX template supplies the Report on Use of AI heading.
-    lines: List[str] = []
-    context = _problem_context(decision_log, False)
-    if context:
-        lines.append(context.rstrip())
-        lines.append("")
-    if not entries:
-        lines.extend(
-            [
-                "The team did not use generative AI, AI-assisted translation, code completion, or other AI-assisted tools in preparing this submission.",
-                "",
-            ]
-        )
-        return "\n".join(lines)
-
-    lines.extend(
-        [
-            "The entries below are listed in order of use. The team verified the accuracy, validity, appropriateness, and originality of all AI-assisted material and remains responsible for the submitted work.",
-            "",
-        ]
-    )
-    for index, entry in enumerate(entries, 1):
-        lines.extend(
-            [
-                f"## {index}. {entry.tool} ({entry.version}, {entry.model})",
-                "",
-                f"**Purpose:** {entry.purpose}",
-                "",
-                f"**Workflow stage:** {entry.use_stage}",
-                "",
-                f"**Sections affected:** {', '.join(entry.paper_sections)}",
-                "",
-            ]
-        )
-        if entry.used_at:
-            lines.extend([f"**Date/time used:** {entry.used_at}", ""])
-        if entry.query and entry.output:
-            lines.extend(
-                [
-                    "**Query:**",
-                    "",
-                    _fenced_block(entry.query),
-                    "",
-                    "**Output:**",
-                    "",
-                    _fenced_block(entry.output),
-                    "",
-                ]
-            )
-        else:
-            lines.extend(["**Disclosure:**", "", entry.disclosure, ""])
-        lines.extend(["**Human verification and revisions:**", "", entry.human_review, ""])
-        if entry.adoption:
-            lines.extend(["**Material incorporated:**", "", entry.adoption, ""])
-    return "\n".join(lines).rstrip() + "\n"
 
 
 def _load_reportlab() -> Dict[str, Any]:
@@ -676,16 +614,7 @@ def render_reports(
 ) -> List[Path]:
     """Render all outputs for one competition and return their paths."""
     decision_log, entries = load_ledger(decision_log_path)
-    selected = resolve_competition(competition, decision_log)
-    if selected == "mcm":
-        if markdown_only:
-            raise LedgerValidationError("--markdown-only 仅用于 CUMCM")
-        paper_workspace.mkdir(parents=True, exist_ok=True)
-        md_path = paper_workspace / MCM_MARKDOWN_FILENAME
-        md_path.write_text(
-            render_mcm_markdown(entries, decision_log), encoding="utf-8"
-        )
-        return [md_path]
+    resolve_competition(competition, decision_log)
 
     if not entries:
         for stale_path in (
@@ -732,7 +661,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--competition",
-        choices=("cumcm", "mcm"),
+        choices=("cumcm",),
         help="覆盖日志中的 competition",
     )
     parser.add_argument(
@@ -754,6 +683,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    # Windows 控制台默认 GBK；强制 UTF-8 输出，避免子进程按 utf-8 捕获中文时崩溃。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError, OSError):
+        pass
+
     args = build_parser().parse_args(argv)
     try:
         outputs = render_reports(
