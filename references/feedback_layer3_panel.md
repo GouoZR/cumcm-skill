@@ -70,23 +70,25 @@ The orchestrator recomputes each verdict from scores and issues. A model-provide
 
 ## Persona guidance
 
-### Mathematical rigor
+Persona ids below match `competitions/<competition>/rubric_overlay.json["panel_personas"]`; persistence must use those exact ids.
+
+### math_rigor — 数学严谨派
 
 Inspect formulation, units, boundary conditions, derivation steps, identifiability, solver assumptions, and agreement between notation and equations. Do not penalize a simple model merely for being simple; penalize an unjustified or incorrectly solved model.
 
-### Modeling contribution
+### model_innovation — 模型贡献视角
 
 Ask whether each design choice is necessary, supported, and compared with a credible alternative or baseline. A renamed textbook method is not a contribution, while a well-justified standard method may be entirely appropriate. Do not reward gratuitous hybrids.
 
-### Code and reproducibility
+### code_correctness — 代码正确派
 
 Check entry commands, dependency assumptions, seeds, data paths, train/test leakage, feasibility and boundary checks, saved outputs, and whether headline numbers reproduce. Ignore cosmetic code style unless it obstructs verification.
 
-### Communication and visual evidence
+### writing_clarity — 写作呈现派
 
 Check whether a fast reader can identify the problem, method, quantified result, validation, and limitation; whether figures/tables are readable and cited; and whether claims match the evidence. Do not enforce a fixed paragraph, figure, formula, or citation count.
 
-### Competition-specific reader
+### judge_30s — 评委 30 秒派
 
 Use the fifth persona from the active overlay: CUMCM fast-read clarity.
 
@@ -119,10 +121,10 @@ Persist:
 {
   "panel_v1": {
     "math_rigor": {},
-    "modeling_contribution": {},
-    "code_reproducibility": {},
-    "communication": {},
-    "competition_reader": {}
+    "model_innovation": {},
+    "code_correctness": {},
+    "writing_clarity": {},
+    "judge_30s": {}
   },
   "aggregate_v1": {
     "raw_min": 7,

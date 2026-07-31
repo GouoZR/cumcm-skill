@@ -48,7 +48,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 | 文献检索 | `references/sciverse_guide.md` | Sciverse MCP 接入指南 |
 | 用户产物 | 用户工作目录的相对路径 | `<cwd>/state/`, `<cwd>/results/`, `<cwd>/figures/`, `<cwd>/paper_workspace/` |
 | state 持久化 | `<cwd>/state/decision_log.json` | 各 stage 必读必写 |
-| 环境变量 | `CUMCM_STATE_DIR` / `SCIVERSE_API_TOKEN` / `PACKYAPI_TOKEN` | scripts 用此变量 |
+| 环境变量 | `MATHMODEL_STATE_DIR`（兼容 `CUMCM_STATE_DIR`）/ `SCIVERSE_API_TOKEN` / `PACKYAPI_TOKEN` | scripts 路径解析与外部服务 |
 
 约定: `<skill>/` = skill 安装目录 (`~/.claude/skills/cumcm-skill/`), `<cwd>/` = 用户 cwd。
 
@@ -60,7 +60,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 1. 一段话介绍 (≤50 字): "CUMCM 国赛建模工作流, 10 阶段 + Sciverse 文献 + 多 Agent 并行, 全程问答式."
 
 2. 收集启动字段；已提供或 state 已记录的字段不再询问，只把尚缺字段合并成一轮 AskUserQuestion:
-   - 题号 (A-E; "未公布"亦可)
+   - 题号 (A-F; "未公布"亦可)
    - 队员数 + 各人擅长 (建模/编程/写作)
    - 截止时间 (ISO 字符串或 "距现在 X 小时")
    - 题目 PDF 路径 ("未公布"亦可)
@@ -165,10 +165,12 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 - 每阶段开头/结尾: `<cwd>/state/decision_log.json` 必读/必写
 - stage 1-9: `references/rubrics.md` 对应章节
 - **stage 1**: `competitions/cumcm/topic_specs.json`
+- **stage 3**: `competitions/cumcm/distilled_naming.md` (按需: 命名变体模板, 与 winning_patterns §4 互补)
 - stage 3, 5: `references/model_catalog.md` + `references/algorithms/` 对应算法
 - **stage 5**: per-Qi 评分后调 `scripts/score_artifact.py --mode aggregate_qi`
 - **stage 0/8/9**: `competitions/cumcm/current_rules.md`
 - **stage 8**: `competitions/cumcm/{winning_patterns, phrase_bank, abstract_template, paper_skeleton}.md`
+- **stage 8** (按需): `competitions/cumcm/distilled_{phrases,structures,formats}.md` (段落/结构/格式模板, 与 phrase_bank/paper_skeleton 互补)
 - **stage 8**: `references/writing/{写作规范, 章节模板, 自审框架}.md`
 - **stage 8**: `references/visualization/{可视化规范, 图表选择与避坑}.md`
 - **stage 8**: `competitions/cumcm/empirical.json` (59 份样本观察分位)

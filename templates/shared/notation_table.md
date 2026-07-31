@@ -1,6 +1,6 @@
 # 符号说明表模板 (notation_table — 快速参考)
 
-> stage 4 产出, stage 8 §4 用 LaTeX booktabs。详细操作见 `references/stage_04_foundation.md` Step 3。
+> stage 4 产出, stage 8 §4 直接复用为 Markdown 表格。详细操作见 `references/stage_04_foundation.md` Step 3。
 
 ---
 
@@ -53,4 +53,4 @@
 - B5 物理量缺单位或单位冲突 → 补齐并统一；确实不适用时明确标注
 - 符号未在 §4 表中出现就用 → 补到表内或脚注
 
-LaTeX booktabs 模板示例: 见 stage_04 §Step 3 (本文不重复)。
+Markdown 表格样式示例: 见 stage_04 §Step 3 (本文不重复)。

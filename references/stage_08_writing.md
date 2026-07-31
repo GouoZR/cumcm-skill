@@ -385,15 +385,15 @@ pandoc paper.md -o paper.docx \
 
 ## 9. 评分 (L1)
 
-使用 `competitions/cumcm/rubric_overlay.json` 的五维评分:
+按 `scripts/score_artifact.py` 的 5 维白名单评分，实际生效的权重由 `config/dim_weights.json[cumcm][<task_type>]` 的 stage 8 部分按题型加载（未配置的题型按 default 全 1.0 等价处理）：
 
-| 维度 | 权重 | 检查项 |
+| dim key (score_artifact) | 维度 | 检查项 |
 |---|---|---|
-| 完整性 | 0.25 | 所有必需要素齐全 |
-| 逻辑性 | 0.25 | 问题→模型→求解→结论 连贯 |
-| 规范性 | 0.20 | 格式、引用、图表符合规范 |
-| 创新性 | 0.15 | 模型选择/改进有创新点 |
-| 可读性 | 0.15 | 语言流畅、图表清晰 |
+| `1_abstract_5_paragraph` | 摘要信息链 | 覆盖问题、逐问方法、可追溯结果、验证与边界；不机械凑段或字数 |
+| `2_section_completeness` | 章节完整性 | 题目要求与证据链所需章节齐全，无空节 |
+| `3_formulas_figures_citations` | 公式 / 图表 / 引用 | 编号规范，首次引用先解释，引用格式符合当届要求 |
+| `4_language_quality` | 语言质量 | 中文学术表达清晰，句长适度，术语前后一致 |
+| `5_visual_consistency` | 视觉一致性 | 字号 / 配色 / 字体全文统一，图表各自承担明确证据职责 |
 
 ---
 

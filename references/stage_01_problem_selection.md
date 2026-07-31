@@ -26,7 +26,7 @@ next: stage_02_analysis
 
 ## 目标
 
-在 CUMCM 题号体系内 (A-E), 选出**最契合团队优势 + 时间预算 + 数据可获取性**的一题，并让选择、否决与后续变更都有据可查。
+在 CUMCM 题号体系内 (A-F, 以当届题面公布为准), 选出**最契合团队优势 + 时间预算 + 数据可获取性**的一题，并让选择、否决与后续变更都有据可查。
 
 **第一步必做**: 加载 `competitions/cumcm/topic_specs.json` 获取题号清单与每题 `task_type_key`; 选定后写 `decision_log.task_type` (供 stage 3+ 的 dim_weights 加权)。
 
@@ -52,10 +52,10 @@ next: stage_02_analysis
 
 ```bash
 # 路径: <skill>/competitions/cumcm/topic_specs.json
-# 加载后得到 CUMCM 题号清单 (A-E) 与每题的 task_type_key
+# 加载后得到 CUMCM 题号清单 (A-F, 以当届题面公布为准) 与每题的 task_type_key
 ```
 
-题号体系总览 (引用 `topic_specs.json`):
+题号体系总览 (引用 `topic_specs.json`; 以当届题面实际公布为准):
 
 | 题号 | 默认子问数 | 主要类型 |
 |------|-----------|---------|
@@ -64,6 +64,7 @@ next: stage_02_analysis
 | C | 3-5 | 数据类 |
 | D | 3-5 | 工业/工程类 |
 | E | 3-5 | 创新/开放类 |
+| F | 3-5 | 评价类 (历史题号, 是否出现以当届为准) |
 
 ### Step 1: 候选题信息提取 (45 min,可并行)
 
@@ -93,9 +94,9 @@ next: stage_02_analysis
 
 ```
 对每题:
-  agentic_search: "<题核心问题> mathematical model solution"
-  agentic_search: "<题核心问题> dataset benchmark"
-  meta_search: 该领域近年论文数量趋势
+  semantic_search: "<题核心问题> mathematical model solution"
+  semantic_search: "<题核心问题> dataset benchmark"
+  search_papers: 该领域近年论文数量趋势 (按年份排序/过滤)
 ```
 
 输出: 每题附 3-5 条文献摘要 (标题 + 方法 + 关键发现), 辅助 Step 2 评分。

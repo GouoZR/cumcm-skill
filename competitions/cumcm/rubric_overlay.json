@@ -31,8 +31,8 @@
         "1_anti_pattern_coverage": {
           "describe": "对照 competitions/cumcm/anti_patterns.md 42 条逐条核查；该清单是维护者启发式，不是官方评分线"
         },
-        "5_docx_assembly_clean": {
-          "describe": "pandoc Markdown→DOCX 无报错, 章节编号完整, 图表不越界"
+        "5_pdf_compile_clean": {
+          "describe": "pandoc Markdown→DOCX 无报错, 章节编号完整, 图表不越界, 最终 PDF 渲染抽检通过"
         }
       }
     }
