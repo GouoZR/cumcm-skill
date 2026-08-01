@@ -142,7 +142,7 @@ Persist:
 Deduplicate issues that point to the same source defect, then sort by severity and downstream impact. Map each accepted issue to the smallest responsible artifact:
 
 | Concern | Default target |
-|---|---|
+|--------------------------------------------------------|-------------------------------|
 | formulation, solver, result mismatch | Stage 5 model/code/result files |
 | sensitivity or failure boundary | Stage 6 |
 | unsupported strength, limitation, or transfer claim | Stage 7 |

@@ -14,7 +14,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 ## 平台要求
 
 | 项目 | 说明 |
-|---|---|
+|--------------|-----------------------------------------------------|
 | **运行环境** | Claude Code (唯一支持) |
 | **用户交互** | `AskUserQuestion` 工具 |
 | **文献检索** | Sciverse MCP Server (`npx -y sciverse-mcp-server`) |
@@ -39,7 +39,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 ## 路径解析协议 (任何阶段必读)
 
 | 类型 | 位置 | 例 |
-|------|------|-----|
+|------------|----------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
 | skill 内通用 | skill 根目录的相对路径 | `references/stage_05_subproblem_loop.md`, `templates/shared/decision_log.json` |
 | 竞赛特化 | `competitions/cumcm/...` | `competitions/cumcm/winning_patterns.md` |
 | 算法参考 | `references/algorithms/...` | `references/algorithms/01-优化算法说明.md` |
@@ -48,7 +48,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 | 文献检索 | `references/sciverse_guide.md` | Sciverse MCP 接入指南 |
 | 用户产物 | 用户工作目录的相对路径 | `<cwd>/state/`, `<cwd>/results/`, `<cwd>/figures/`, `<cwd>/paper_workspace/` |
 | state 持久化 | `<cwd>/state/decision_log.json` | 各 stage 必读必写 |
-| 环境变量 | `MATHMODEL_STATE_DIR`（兼容 `CUMCM_STATE_DIR`）/ `SCIVERSE_API_TOKEN` / `PACKYAPI_TOKEN` | scripts 路径解析与外部服务 |
+| 环境变量 | `CUMCM_STATE_DIR`（兼容 `MATHMODEL_STATE_DIR`）/ `SCIVERSE_API_TOKEN` / `PACKYAPI_TOKEN` | scripts 路径解析与外部服务 |
 
 约定: `<skill>/` = skill 安装目录 (`~/.claude/skills/cumcm-skill/`), `<cwd>/` = 用户 cwd。
 
@@ -87,7 +87,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 ## 三模式
 
 | Mode | 上下文策略 | 反馈层 | 用途 |
-|---|---|---|---|
+|------------|-----------------------------|----------------------|-----------------------|
 | fast | 只保留当前阻断项与最小证据 | L1 单次 | 选题试跑 / sanity check |
 | standard | 按阶段加载并保留决策摘要 | L1+L2 | 默认主流程 |
 | championship | 扩展证据与独立视角 + 多 Agent | L1+L2+L3+L4 + red-team | 提交前最后冲刺 |
@@ -103,7 +103,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 ## 10 阶段索引
 
 | # | 阶段 | reference | 时长 | 反馈 | 说明 |
-|---|------|-----------|------|------|------|
+|---|---------------------------|-------------------------------|----------|-------------|--------------------------------|
 | 0 | 团队启动 + 资料预扫 | `stage_00_kickoff.md` | 1h | L1 | 环境准备、Sciverse 背景调研 |
 | 1 | 选题 (多题对比 → 1) | `stage_01_problem_selection.md` | 2-4h | L1 | 5 维矩阵 + Sciverse 文献辅助 |
 | 2 | 问题深度解析与分解 | `stage_02_analysis.md` | 2-3h | L1 | 子问题拆解 |
@@ -149,7 +149,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 ## 图表系统 (双轨制)
 
 | 图表类型 | 工具 | 格式 | 用途 |
-|---|---|---|---|
+|----------|----------------------------|------------------|---------------------------------------|
 | **数据图** | matplotlib / plotly (Python) | PNG ≥300 DPI + SVG | 折线图、柱状图、热力图、Tornado、散点等 |
 | **概念图** | gpt-image-2 (PackyAPI) | PNG | 系统架构图、算法流程示意、问题场景图 |
 
@@ -183,7 +183,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 ## 收敛准则
 
 | verdict | 触发 | 行为 |
-|---------|------|------|
+|------------------------------|---------------------------------|-----------------------------------|
 | `block` | issues 含 ≥1 high-severity | 暂停, 用户介入 |
 | `pass_early` | raw_min ≥ 9 AND weighted_mean ≥ 9 | iter-1 早退 |
 | `pass` | raw_min ≥ 7 AND weighted_mean ≥ 8 | 进下一阶段 |

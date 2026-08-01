@@ -117,7 +117,7 @@ def verdict(scores, issues, weights=None):
 
 **Stage 5 多 Qi 场景额外 verdict** (由 `compute_stage5_verdict` 聚合, 见 §6 Stage 5):
 | verdict | 触发条件 | 行为 |
-|---------|---------|------|
+|------------------|-----------------------------------------------------------------------------------------|------------------------------|
 | `pass_with_review` | 任 Qi.min ≥ 7 且 Qi.mean < 8 (mark_for_review), 但加权 stage_min ≥ 7 且 weighted_mean ≥ 8 | 进 stage 6, L2 必读 review_qis |
 | `refine_partial` | 任 Qi.min < 7, 但其他 Qi 已 pass | 只 refine 该 Qi, 不动其他 Qi |
 
@@ -155,7 +155,7 @@ abstract_chars: 当前值=720；59 份可提取样本 p50=992、p25-p75=[748,114
 **字段映射**（Stage 8 示例）：
 
 | critic dim | empirical.json key | 注意 |
-|---|---|---|
+|----------------------------|------------------|--------------------------------------|
 | 1_abstract_5_paragraph | abstract_chars | 旧键名保留；评价信息闭环，不要求五段 |
 | 3_formulas_figures_citations | formula_count | 数量不代表严谨性 |
 | 3_formulas_figures_citations | figure_count | 数量不代表证据质量 |

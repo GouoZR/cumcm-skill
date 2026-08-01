@@ -264,7 +264,7 @@ paper_workspace/
 ## 5. 图表双轨制
 
 | 类型 | 工具 | 负责 |
-|---|---|---|
+|----------------------------------------|----------------------|----------|
 | **数据图** (折线/柱状/热力/Tornado/散点) | matplotlib / plotly | 图表 Agent |
 | **概念图** (系统架构/算法流程/问题示意) | gpt-image-2 (PackyAPI) | 图表 Agent |
 
@@ -388,7 +388,7 @@ pandoc paper.md -o paper.docx \
 按 `scripts/score_artifact.py` 的 5 维白名单评分，实际生效的权重由 `config/dim_weights.json[cumcm][<task_type>]` 的 stage 8 部分按题型加载（未配置的题型按 default 全 1.0 等价处理）：
 
 | dim key (score_artifact) | 维度 | 检查项 |
-|---|---|---|
+|------------------------------|------------------|------------------------------------------------------------|
 | `1_abstract_5_paragraph` | 摘要信息链 | 覆盖问题、逐问方法、可追溯结果、验证与边界；不机械凑段或字数 |
 | `2_section_completeness` | 章节完整性 | 题目要求与证据链所需章节齐全，无空节 |
 | `3_formulas_figures_citations` | 公式 / 图表 / 引用 | 编号规范，首次引用先解释，引用格式符合当届要求 |

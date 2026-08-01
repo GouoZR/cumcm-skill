@@ -24,7 +24,7 @@ Markdown 写作 (paper.md)
 Stage 8 启用 5 个 Agent 并行写作:
 
 | Agent | 负责文件 | 内容 |
-|---|---|---|
+|------------|----------------------------------------|------------------------------------------|
 | 写作 Agent 1 | `01_abstract.md` ~ `05_notation.md` | 摘要、问题重述、分析、假设、符号 |
 | 写作 Agent 2 | `06_models.md` | 模型建立与求解（论文主体） |
 | 写作 Agent 3 | `07_sensitivity.md` ~ `08_evaluation.md` | 灵敏度、评价、推广 |
@@ -36,7 +36,7 @@ Stage 8 启用 5 个 Agent 并行写作:
 ## 工作区文件
 
 | 文件 | 内容 | 负责 Agent |
-|---|---|---|
+|-----------------------|------------------------|----------|
 | `01_abstract.md` | 摘要与关键词 | Agent 1 |
 | `02_problem_restate.md` | 问题重述 | Agent 1 |
 | `03_analysis.md` | 问题分析与技术路线 | Agent 1 |
@@ -227,7 +227,7 @@ pandoc paper.md -o paper.docx \
 ## 相关资源
 
 | 用途 | 路径 |
-|---|---|
+|------------|--------------------------------------------------|
 | 摘要提示 | `abstract_template.md` |
 | 高质量模式 | `winning_patterns.md` |
 | 反模式自检 | `anti_patterns.md` |
@@ -238,6 +238,6 @@ pandoc paper.md -o paper.docx \
 | 自审框架 | `../../references/writing/自审框架.md` |
 | 可视化规范 | `../../references/visualization/可视化规范.md` |
 | 图表选择 | `../../references/visualization/图表选择与避坑.md` |
-| 算法详情 | `../../references/algorithms/` (7 类 60+ 算法) |
+| 算法详情 | `../../references/algorithms/` (7 类 58 算法) |
 | 文献检索 | `../../references/sciverse_guide.md` |
 | 共享表格模板 | `../../templates/shared/` |

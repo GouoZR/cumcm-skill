@@ -7,7 +7,7 @@ This repository contains the `cumcm-skill` product. When working inside this rep
 - `SKILL.md` defines runtime behavior and trigger boundaries.
 - `references/stage_00_kickoff.md` through `references/stage_09_review.md` contain stage details and must be loaded lazily at runtime.
 - `competitions/cumcm/` contains competition-specific rules, heuristics, overlays, and paper structures.
-- `references/algorithms/` contains 60+ algorithm references organized by category.
+- `references/algorithms/` contains 7-category, 58 algorithm references organized by category.
 - `references/writing/` contains writing standards, chapter templates, and self-review frameworks.
 - `references/visualization/` contains visualization standards and figure selection guides.
 - `references/sciverse_guide.md` contains Sciverse MCP integration documentation.

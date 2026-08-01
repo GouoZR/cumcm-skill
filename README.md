@@ -33,20 +33,20 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
          ↓ 懒加载
       references/stage_00~09  (阶段细则, 按需加载)
          ↓ 读写
-      state/decision_log.json (跨阶段持久化状态)
+      <cwd>/state/decision_log.json (跨阶段持久化状态)
          ↓ 依赖
-      ┌─────────────────────────────────────┐
-      │ competitions/cumcm/  (国赛规则/模板/经验)  │
-      │ references/algorithms/  (7类60+算法)     │
-      │ references/visualization/  (数据图规范)    │
+      ┌───────────────────────────────────────────┐
+      │ competitions/cumcm/  (国赛规则/模板/经验) │
+      │ references/algorithms/  (7类58算法)       │
+      │ references/visualization/  (数据图规范)   │
       │ references/writing/  (写作规范/自审)      │
       │ references/sciverse_guide.md  (文献MCP)   │
-      └─────────────────────────────────────┘
+      └───────────────────────────────────────────┘
          ↓ 外部服务
       ┌─────────────────────────────────────┐
-      │ Sciverse MCP   — 4.66亿学术文献检索    │
-      │ PackyAPI REST  — gpt-image-2 概念图    │
-      │ MCP web-search — 通用网页搜索          │
+      │ Sciverse MCP   — 4.66亿学术文献检索 │
+      │ PackyAPI REST  — gpt-image-2 概念图 │
+      │ MCP web-search — 通用网页搜索       │
       └─────────────────────────────────────┘
 ```
 
@@ -65,7 +65,7 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 ### 根目录入口
 
 | 文件 | 用途 | 何时读 |
-|------|------|--------|
+|-----------|--------------------------------|----------------------|
 | `SKILL.md` | 主工作流定义，Claude Code 入口 | 用户说"开始建模"时加载 |
 | `AGENTS.md` | 维护者指南，说明如何修改本 skill | 维护/二次开发时 |
 | `README.md` | 本文件 | 新会话了解全貌 |
@@ -74,7 +74,7 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 ### competitions/cumcm/ — 国赛特化层（15 个文件）
 
 | 文件 | 用途 | 关键信息 |
-|------|------|---------|
+|-------------------------|----------------------------------|-------------------------------------------------|
 | `README.md` | 国赛基本信息（时长/语言/题号体系） | 72h，中文，A-F 题号路由（有效题号以当届题面为准） |
 | `current_rules.md` | 2026 当届官方规则链接 | Stage 0/9 必读，核对不失效 |
 | `topic_specs.json` | 题号 → task_type 映射 | Stage 1 选题路由 |
@@ -94,7 +94,7 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 ### references/ — 10 阶段细则 + 反馈层（20+ 个文件）
 
 | 文件 | 阶段 | 核心内容 |
-|------|------|---------|
+|--------------------------------|---------|----------------------------------|
 | `stage_00_kickoff.md` | 0 | 团队启动、环境检查、题目预扫 |
 | `stage_01_problem_selection.md` | 1 | 五维选题矩阵 + Sciverse 文献辅助 |
 | `stage_02_analysis.md` | 2 | 问题分解、子问题卡片 |
@@ -116,8 +116,8 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 ### references/ — 定制增强（v7.0 新增）
 
 | 目录/文件 | 内容 | 用途 |
-|----------|------|------|
-| `algorithms/` | 7 个 Markdown 文件 + README | 60+ 算法详解（优化/预测/评价/图论/统计/综合/ML） |
+|---------------------------------|---------------------------|------------------------------------------------|
+| `algorithms/` | 7 个 Markdown 文件 + README | 7 类 58 算法详解（优化/预测/评价/图论/统计/综合/ML） |
 | `visualization/可视化规范.md` | SCI/Nature 级图表标准 | 数据图规范（配色/字体/分辨率） |
 | `visualization/图表选择与避坑.md` | 图型选择决策树 | 什么数据该用什么图 |
 | `visualization/plot_style.py` | Python 出版级样式 | matplotlib 全局样式 |
@@ -133,7 +133,7 @@ Markdown → DOCX 转换由系统 Pandoc 完成（见 `stage_08_writing.md` §8 
 ### scripts/ — 工具脚本（5 个活跃 + 3 个维护用）
 
 | 脚本 | 状态 | 用途 |
-|------|------|------|
+|------------------------------|------------|---------------------------------------------|
 | `doctor.py` | ✅ 活跃 | 赛前 preflight 检查（环境/依赖/结构） |
 | `score_artifact.py` | ✅ 活跃 | L1 Critic 结果处理、verdict 计算、per-Qi 聚合 |
 | `extract_diff.py` | ✅ 活跃 | Section-level diff，定向精修 |
@@ -146,7 +146,7 @@ Markdown → DOCX 转换由系统 Pandoc 完成（见 `stage_08_writing.md` §8 
 ### 其他目录
 
 | 目录 | 内容 | 用途 |
-|------|------|------|
+|-------------------------|----------------------------------------|---------------------------------|
 | `config/dim_weights.json` | CUMCM 题型加权配置 (A-E; 题型以当届为准) | score_artifact.py 加权用 |
 | `templates/shared/` | decision_log / 代码模板 / 表格模板 | 各阶段初始化时复制 |
 | `state/` | .gitkeep | 运行时状态目录（用户项目下） |
@@ -166,7 +166,7 @@ Markdown → DOCX 转换由系统 Pandoc 完成（见 `stage_08_writing.md` §8 
 ### 1. Sciverse MCP — 学术文献检索
 
 | 项目 | 值 |
-|------|-----|
+|--------|-------------------------------------------------------|
 | 安装方式 | `npm install -g sciverse-mcp-server` + `claude mcp add` |
 | Token | `SCIVERSE_API_TOKEN` 环境变量 |
 | 费用 | 免费（需注册） |
@@ -180,7 +180,7 @@ Markdown → DOCX 转换由系统 Pandoc 完成（见 `stage_08_writing.md` §8 
 ### 2. PackyAPI gpt-image-2 — AI 概念图
 
 | 项目 | 值 |
-|------|-----|
+|--------|----------------------------------------|
 | 接入方式 | REST API (`POST /v1/images/generations`) |
 | Token | `PACKYAPI_TOKEN` 环境变量（Sora 分组） |
 | 费用 | 按次计费，约 $0.006~$0.712/次 |
@@ -191,7 +191,7 @@ Markdown → DOCX 转换由系统 Pandoc 完成（见 `stage_08_writing.md` §8 
 ### 3. MCP web-search — 通用网页搜索
 
 | 项目 | 值 |
-|------|-----|
+|--------|--------------------------------|
 | 接入方式 | MCP Server |
 | 用途 | 搜索官方规则、竞赛通知、补充资料 |
 
@@ -240,7 +240,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ## 版本历史
 
 | 版本 | 日期 | 核心变更 |
-|------|------|---------|
+|------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | v7.0 | 2026-07 | 基于 upstream v6.1.0 fork，专精 CUMCM + Claude Code，移除 MCM/电工杯/Codex/LaTeX，MD+DOCX 管线，Sciverse MCP 集成，gpt-image-2 概念图，多 Agent 并行架构，算法库/可视化/写作规范移植 |
 
 ---

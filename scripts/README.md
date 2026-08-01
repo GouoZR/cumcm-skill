@@ -24,7 +24,7 @@ python scripts/score_artifact.py \
   --decision-log /path/to/project/state/decision_log.json
 ```
 
-不传 `--decision-log` 时，脚本按 `MATHMODEL_STATE_DIR`、兼容变量 `CUMCM_STATE_DIR`、最后 `<cwd>/state/decision_log.json` 的顺序解析路径。
+不传 `--decision-log` 时，脚本按 `CUMCM_STATE_DIR`、兼容变量 `MATHMODEL_STATE_DIR`、最后 `<cwd>/state/decision_log.json` 的顺序解析路径。
 
 所有子问完成后，可聚合 per-Qi 结果并把 `qi_status`、`review_qis`、`refine_qis` 与最终 verdict 原子写回 Stage 5：
 
@@ -131,9 +131,9 @@ python scripts/ingest_papers.py \
 ## 路径协议
 
 | 类型 | 位置 | 覆盖方式 |
-|---|---|---|
+|--------------|----------------------------------------------------------|-------------------------------------|
 | skill 静态资源 | `<skill>/{references,templates,scripts,competitions}` | 不覆盖 |
-| 项目状态 | `<project>/state/decision_log.json` | `--decision-log` 或 `MATHMODEL_STATE_DIR` |
+| 项目状态 | `<project>/state/decision_log.json` | `--decision-log` 或 `CUMCM_STATE_DIR` |
 | 项目产物 | `<project>/{results,figures,paper_workspace,paper_output}` | 通过各脚本参数指定 |
 
 `<cwd>` 只是命令启动时的当前目录，不是一个应当原样创建的文件夹名。
