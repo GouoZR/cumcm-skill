@@ -93,11 +93,11 @@ class AIUsageEntry:
 
 
 def resolve_decision_log_path(cli_arg: Optional[str] = None) -> Path:
-    """Resolve CLI > MATHMODEL_STATE_DIR > CUMCM_STATE_DIR > cwd/state."""
+    """Resolve CLI > CUMCM_STATE_DIR > MATHMODEL_STATE_DIR (兼容) > cwd/state."""
     if cli_arg:
         return Path(cli_arg)
-    state_dir = os.environ.get("MATHMODEL_STATE_DIR") or os.environ.get(
-        "CUMCM_STATE_DIR"
+    state_dir = os.environ.get("CUMCM_STATE_DIR") or os.environ.get(
+        "MATHMODEL_STATE_DIR"
     )
     if state_dir:
         return Path(state_dir) / "decision_log.json"
@@ -226,9 +226,10 @@ def load_ledger(path: Path) -> tuple[Dict[str, Any], List[AIUsageEntry]]:
 
 
 def resolve_competition(cli_arg: Optional[str], decision_log: Dict[str, Any]) -> str:
-    """Resolve CLI > MATHMODEL_COMPETITION > decision log."""
+    """Resolve CLI > CUMCM_COMPETITION (兼容 MATHMODEL_COMPETITION) > decision log."""
     competition = (
         cli_arg
+        or os.environ.get("CUMCM_COMPETITION")
         or os.environ.get("MATHMODEL_COMPETITION")
         or decision_log.get("competition")
     )

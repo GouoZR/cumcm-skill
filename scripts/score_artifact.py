@@ -78,20 +78,20 @@ _SKILL_ROOT = Path(__file__).resolve().parent.parent
 # ============================================================================
 
 def resolve_decision_log_path(cli_arg: str = None) -> Path:
-    """路径解析协议: CLI > MATHMODEL_STATE_DIR > CUMCM_STATE_DIR (兼容) > <cwd>/state/decision_log.json"""
+    """路径解析协议: CLI > CUMCM_STATE_DIR > MATHMODEL_STATE_DIR (兼容) > <cwd>/state/decision_log.json"""
     if cli_arg:
         return Path(cli_arg)
-    env_dir = os.environ.get("MATHMODEL_STATE_DIR") or os.environ.get("CUMCM_STATE_DIR")
+    env_dir = os.environ.get("CUMCM_STATE_DIR") or os.environ.get("MATHMODEL_STATE_DIR")
     if env_dir:
         return Path(env_dir) / "decision_log.json"
     return Path.cwd() / "state" / "decision_log.json"
 
 
 def resolve_competition(cli_arg: str = None, decision_log: dict = None) -> str:
-    """优先级: CLI > env MATHMODEL_COMPETITION > decision_log.competition > 'cumcm'"""
+    """优先级: CLI > env CUMCM_COMPETITION (兼容 MATHMODEL_COMPETITION) > decision_log.competition > 'cumcm'"""
     if cli_arg:
         return cli_arg
-    env = os.environ.get("MATHMODEL_COMPETITION")
+    env = os.environ.get("CUMCM_COMPETITION") or os.environ.get("MATHMODEL_COMPETITION")
     if env:
         return env
     if decision_log and decision_log.get("competition"):
