@@ -1,4 +1,4 @@
-# cumcm-skill
+# cumcm-skill(v1.0)
 
 > CUMCM 国赛 72 小时建模工作流 · Claude Code 独占 · 全程问答式
 
@@ -8,6 +8,36 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](./scripts/doctor.py)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-only-D97757)](./SKILL.md)
 [![License](https://img.shields.io/badge/license-MIT-22c55e)](./LICENSE)
+
+## 想打数模的朋友们可以看一看本小白第一次写的skill，欢迎指导提issue，这是针对数模小白做的一个自动化skill
+
+作者大一第一次数模手忙脚乱。因此一直想开发一个自动化数模的过程，让大家把时间可以更好的用在建模和创新上。伴随着今年Agent的大火，这一愿望也可以逐渐落地，
+最开始是看到[mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0)这个skill后觉得很好用，因此想要加一些自己的东西和看法。目前这个skill也在测试阶段，还有很多不足。
+希望大家也可以自己clone到本地后加一些自己的东西，我相信同一个skill大家加入自己的想法也能做出不同的优秀的作品。
+最后希望这个skill可以帮到你，祝各位国赛顺利！
+
+## 为了可以更好的使用，你还需要两份 API key
+
+本 skill 依赖两个外部服务：**Sciverse**（学术文献检索）和 **PackyAPI**（AI 概念图生成）。第一次使用前需要准备好两份 key，之后由 Agent 帮你一键配置，后续不再需要你重复操作。
+
+| Key | 用途 | 获取地址 | 费用 |
+|------------------|------------------------------------------------|------------------------------------------------------|-----------------------------|
+| **Sciverse Token** | 全阶段文献检索与引用溯源（`SCIVERSE_API_TOKEN`） | [sciverse.space/tokens](https://sciverse.space/tokens) | 免费（需注册） |
+| **PackyAPI Token** | gpt-image-2 学术概念图生成（`PACKYAPI_TOKEN`） | [packyapi.com](https://www.packyapi.com) | 按次计费，约 $0.006~$0.712/次 |
+
+### 怎么用（一键配置）
+
+1. 触发本 skill（说"开始建模" / "打国赛" / "CUMCM"）
+2. Agent 会先检查两份 key 是否已配置
+3. **未配置时，直接把两份 key 发给我即可**，Agent 会自动完成：
+   - 检查并安装 Sciverse MCP Server（`claude mcp add`）
+   - 把两份 key 写入 `~/.claude/settings.json` 的 `env` 字段
+   - 验证配置生效
+4. 配置只需做一次，之后再次使用自动跳过
+
+> 首次配置需要你在终端授权 Agent 执行安装命令。key 只会写入你自己的 `~/.claude/settings.json`，不会上传到任何地方，也不会出现在论文或代码里。
+
+---
 
 ## 一眼看出它和别的建模 Prompt 有什么不同
 
@@ -79,23 +109,17 @@
 git clone https://github.com/GouoZR/cumcm-skill.git \
   ~/.claude/skills/cumcm-skill
 
-# 2. 前置：Sciverse 学术文献 MCP
-npm install -g sciverse-mcp-server
-claude mcp add -s user sciverse -- sciverse-mcp-server
-
-# 3. 前置：环境变量（配在 ~/.claude/settings.json 的 env 字段）
-SCIVERSE_API_TOKEN="你的Sciverse Token"   # https://sciverse.space/tokens
-PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
-
-# 4. 可选：赛前 preflight 检查
+# 2. 可选：赛前 preflight 检查
 python ~/.claude/skills/cumcm-skill/scripts/doctor.py \
   --competition cumcm
 
-# 5. 进入建模项目，启动
+# 3. 进入建模项目，启动
 mkdir -p my-modeling-project
 cd my-modeling-project
 claude
 ```
+
+首次启动时，Agent 会**自动检查并配置外部服务**：把两份 API key（Sciverse + PackyAPI）发给我即可一键完成，详见[「两份 API key」](#为了可以更好的使用你还需要两份-api-key)。不需要手动安装 MCP 或改配置文件。
 
 进入 Claude Code 后输入：
 

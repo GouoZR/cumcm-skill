@@ -65,21 +65,33 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
    - 截止时间 (ISO 字符串或 "距现在 X 小时")
    - 题目 PDF 路径 ("未公布"亦可)
 
-3. 自动初始化 (Agent 自动完成):
+3. **外部服务配置检查 (Agent 自动完成; 首次使用必须, 之后自动跳过)**:
+   - 检查 Sciverse MCP 是否可用: 运行 `claude mcp list` 看是否有 sciverse 条目
+   - 检查两份 key 是否已配置: 读 `~/.claude/settings.json` 的 env 字段是否有 `SCIVERSE_API_TOKEN` 和 `PACKYAPI_TOKEN` (或直接尝试调用对应脚本/工具验证)
+   - 若都就绪 → 跳过; 若缺任一 → 用一轮 AskUserQuestion 请用户提供两份 key:
+     - 用户直接把两个 key 粘给你即可 (README「两份 API key」一节有说明)
+   - 自动配置 (拿到 key 后):
+     - Sciverse MCP 未安装 → 依次运行 `npm install -g sciverse-mcp-server` 和 `claude mcp add -s user sciverse -- sciverse-mcp-server`
+     - 把两个 key 写入 `~/.claude/settings.json` 的 env 字段 (`SCIVERSE_API_TOKEN`, `PACKYAPI_TOKEN`), 保留已有字段
+     - 运行 `claude mcp list` + 一次真实调用验证生效
+   - 首次配置需要用户授权终端命令; key 只写用户本机 settings.json, 不进 state/论文/代码
+
+4. 自动初始化 (Agent 自动完成):
    - 不存在 `<cwd>/state/decision_log.json` → 创建目录并复制 `<skill>/templates/shared/decision_log.json`
    - 写入 decision_log.competition = "cumcm"
    - 已存在 → 读 current_stage 字段决定恢复点
 
-4. 加载 `competitions/cumcm/current_rules.md`，打开其中官方链接核对当届规则；再加载 winning_patterns
+5. 加载 `competitions/cumcm/current_rules.md`，打开其中官方链接核对当届规则；再加载 winning_patterns
 
-5. 进入 Stage 0 (`references/stage_00_kickoff.md`)，若题面未公布则等待
+6. 进入 Stage 0 (`references/stage_00_kickoff.md`)，若题面未公布则等待
 ```
 
 **已有 state 触发** (用户中途回到 skill):
 ```
 1. 读 `<cwd>/state/decision_log.json` 的 current_stage
-2. 加载对应 stage_NN.md
-3. 不重复读 winning_patterns
+2. 若尚未配置过外部服务 (无法确认时先检查一次, 见 Quick Start 第 3 步) → 引导一次性配置
+3. 加载对应 stage_NN.md
+4. 不重复读 winning_patterns
 ```
 
 ---
