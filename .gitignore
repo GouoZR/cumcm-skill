@@ -27,3 +27,6 @@ references/papers/*.pdf
 Thumbs.db
 .idea/
 .vscode/
+
+# 工具缓存
+.ai/
