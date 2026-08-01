@@ -2,6 +2,8 @@
 
 > CUMCM 国赛 72 小时建模工作流 · Claude Code 独占 · 全程问答式
 
+**基座致谢**：本项目基于 [mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0) 深度定制，原作者为**徐子锐** ([handsomeZR-netizen](https://github.com/handsomeZR-netizen))。上游的流程设计、评分体系与材料组织是本项目的地基。
+
 [![Version](https://img.shields.io/badge/version-v1.0-6f42c1)](./SKILL.md)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](./scripts/doctor.py)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-only-D97757)](./SKILL.md)
