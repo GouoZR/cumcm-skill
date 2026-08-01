@@ -76,7 +76,7 @@
 
 ```bash
 # 1. 安装 skill（全局）
-git clone https://github.com/your-name/cumcm-skill.git \
+git clone https://github.com/GouoZR/cumcm-skill.git \
   ~/.claude/skills/cumcm-skill
 
 # 2. 前置：Sciverse 学术文献 MCP
