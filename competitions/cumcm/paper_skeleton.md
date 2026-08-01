@@ -1,17 +1,17 @@
-# CUMCM 论文骨架 (Markdown → DOCX)
+# CUMCM 论文骨架 (Markdown)
 
 > 本文件给出内容占位符与写作指令，不替代当年格式要求。开始写作前先检查同目录 `current_rules.md`；详细工作流见 `../../references/stage_08_writing.md`。
 
 ## 输出管线
 
 ```
-Markdown 写作 (paper.md)
-    → pandoc 转换 (paper.docx)
-        → 用户调格式
-            → 导出 PDF 提交
+Markdown 写作 (paper_workspace/*.md)
+    → 装配为 paper.md (交付物)
+        → 用户自行转 DOCX/PDF 并调格式
+            → 提交
 ```
 
-不再依赖 LaTeX。所有公式使用 MathJax/LaTeX 数学模式（`$...$` / `$$...$$`），pandoc 自动处理。
+所有公式使用 MathJax/LaTeX 数学模式（`$...$` / `$$...$$`），在 Markdown 与主流编辑器中可读。
 
 ## 提交边界
 
@@ -214,15 +214,9 @@ cat 01_abstract.md 02_problem_restate.md 03_analysis.md \
     10_appendix.md > paper.md
 ```
 
-### Markdown → DOCX (用户执行)
+### 交付物
 
-```bash
-pandoc paper.md -o paper.docx \
-  --from markdown --to docx \
-  --number-sections \
-  --toc --toc-depth=3 \
-  --resource-path=figures/
-```
+装配得到的 `paper.md` 即交付物。如需 DOCX/PDF，由用户自行转换并核对格式与页数。
 
 ## 相关资源
 

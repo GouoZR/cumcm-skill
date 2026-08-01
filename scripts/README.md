@@ -6,11 +6,11 @@
 
 ### `doctor.py` — 环境与包结构预检
 
-在启动工作流时运行。检查 skill 结构、竞赛包、JSON 配置和本地工具；`--skip-tools` 适合只做静态检查。
+在启动工作流时运行。检查 skill 结构、竞赛包、JSON 配置。
 
 ```bash
 python scripts/doctor.py --competition cumcm --workspace /path/to/project
-python scripts/doctor.py --competition cumcm --skip-tools --json
+python scripts/doctor.py --competition cumcm --json
 ```
 
 ### `score_artifact.py` — L1 Critic 结果处理

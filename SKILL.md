@@ -1,13 +1,13 @@
 ---
 name: cumcm-skill
-description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。Use when a user explicitly works on CUMCM (国赛/全国大学生数学建模竞赛) or asks to run/review a CUMCM paper from problem selection through modeling, solving, robustness, writing, compliance, and final submission review. Provides 10 stages, persistent decision state, competition-specific rules/templates, deterministic scoring helpers, numbered decisions, Sciverse academic literature search, multi-Agent parallel solving/writing, and Markdown+DOCX output. Claude Code only. Do not trigger for generic model selection, ordinary data analysis, or non-CUMCM paper review.
+description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。Use when a user explicitly works on CUMCM (国赛/全国大学生数学建模竞赛) or asks to run/review a CUMCM paper from problem selection through modeling, solving, robustness, writing, compliance, and final submission review. Provides 10 stages, persistent decision state, competition-specific rules/templates, deterministic scoring helpers, numbered decisions, Sciverse academic literature search, multi-Agent parallel solving/writing, and Markdown output. Claude Code only. Do not trigger for generic model selection, ordinary data analysis, or non-CUMCM paper review.
 ---
 
 # cumcm-skill — CUMCM 国赛数学建模工作流 (v1.0)
 
 10 阶段把 72 小时的国赛协作变成可恢复、可检查的流程。用户回答关键问题，Agent 维护状态与脚本。每阶段产出经过 rubric 自评、定向精修与跨阶段一致性回检；Stage 8–9 先遵守当届官方规则，再做多视角终审。
 
-**v1.0**: 基于 [mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0, 原作者: 徐子锐 / handsomeZR-netizen) 深度定制。专精 CUMCM 国赛，Claude Code 独占；Markdown + DOCX 输出管线替代 LaTeX；集成 Sciverse MCP 真实文献检索，全阶段可溯源引用；支持多 Agent 并行求解/写作/文献查阅；PackyAPI gpt-image-2 概念图 + Python 数据图双轨图表系统。
+**v1.0**: 基于 [mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0, 原作者: 徐子锐 / handsomeZR-netizen) 深度定制。专精 CUMCM 国赛，Claude Code 独占；Markdown 交付，DOCX/PDF 由用户自行转换；集成 Sciverse MCP 真实文献检索，全阶段可溯源引用；支持多 Agent 并行求解/写作/文献查阅；PackyAPI gpt-image-2 概念图 + Python 数据图双轨图表系统。
 
 ---
 
@@ -20,7 +20,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 | **文献检索** | Sciverse MCP Server (`npx -y sciverse-mcp-server`) |
 | **AI 概念图** | gpt-image-2 (PackyAPI: `POST /v1/images/generations`) |
 | **数据图** | matplotlib / plotly (Python 脚本) |
-| **输出格式** | Markdown (`paper.md`) → pandoc → DOCX (`paper.docx`) |
+| **输出格式** | Markdown (`paper.md` 装配交付) |
 | **状态持久化** | `<cwd>/state/decision_log.json` |
 
 ---

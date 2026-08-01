@@ -28,11 +28,11 @@ feedback: ["L1", "L2_at_end"]
 next: stage_09_review
 ---
 
-# Stage 8 — 论文写作 (Markdown + DOCX, 多 Agent 并行)
+# Stage 8 — 论文写作 (Markdown, 多 Agent 并行)
 
 把 Stage 0–7 的验证产出装配成一篇连贯论文。**不重新建模，不重新求解。** 若写作过程中暴露建模矛盾，记录并触发定向 L2 回退。
 
-**输出格式**: Markdown (`paper.md`) → pandoc → DOCX (`paper.docx`)。不再依赖 LaTeX。
+**输出格式**: 全程 Markdown，装配为 `paper.md`。**`paper.md` 是本 skill 的交付物**；DOCX/PDF 转换由用户自行完成，本 skill 不集成转换工具。
 
 ---
 
@@ -209,7 +209,7 @@ paper_workspace/
 
 - `01_abstract.md`: 只写摘要正文与关键词，不保留 `# 摘要` 标题
 - `02`–`10`: 每个文件一个顶层 Markdown 标题
-- 公式: LaTeX 数学模式 `$...$` (行内) / `$$...$$` (块级)，pandoc 自动处理
+- 公式: LaTeX 数学模式 `$...$` (行内) / `$$...$$` (块级)，在 Markdown 与主流编辑器中可读
 - 图片引用: `![图X: 标题](figures/filename.png)`
 - 表格: Markdown table 格式，复杂表格用 CSV 源数据
 
@@ -369,17 +369,9 @@ cat 01_abstract.md \
     10_appendix.md > paper.md
 ```
 
-### Markdown → DOCX (用户执行)
+### 交付物
 
-```bash
-pandoc paper.md -o paper.docx \
-  --from markdown --to docx \
-  --number-sections \
-  --toc --toc-depth=3 \
-  --resource-path=figures/
-```
-
-> 用户自行在 Word 中调格式后导出 PDF 提交。
+装配得到的 `paper.md` 即本 skill 的交付物。如需 DOCX/PDF，由用户自行转换（例如在 Word 中打开 `paper.md`，或使用自己熟悉的转换工具），并在转换后核对页数、分页、页眉页脚、公式与图表渲染是否符合当届官方要求。
 
 ---
 

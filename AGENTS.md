@@ -23,7 +23,7 @@ This repository contains the `cumcm-skill` product. When working inside this rep
 - Do not add runtime claims about awards, token savings, or elapsed time without a reproducible benchmark.
 - When changing behavior, update the README, tests, state schema, and relevant competition docs together.
 - Do not vendor or reintroduce templates, examples, papers, or binary assets without a clear redistribution license.
-- Output format is Markdown + DOCX via pandoc. Do not introduce LaTeX dependencies.
+- Output format is Markdown (`paper.md`). Do not introduce LaTeX or Pandoc dependencies; DOCX/PDF conversion is the user's responsibility.
 
 ## Verification
 
@@ -32,7 +32,7 @@ Run the checks proportionate to the change. Before a release, run all of them:
 ```bash
 python -m compileall -q scripts templates/shared/code_starter
 python -m unittest discover -s tests -p 'test_*.py' -v
-python scripts/doctor.py --competition cumcm --skip-tools
+python scripts/doctor.py --competition cumcm
 git diff --check
 ```
 

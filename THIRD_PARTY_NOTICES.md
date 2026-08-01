@@ -4,11 +4,11 @@ The original code and documentation in this repository are available under the r
 
 ## CUMCM paper-assembly provenance
 
-This repository assembles the paper as Markdown and converts it to DOCX with Pandoc; it does not ship a LaTeX template. The conversion is an assembly aid, not an official CUMCM template or an endorsement by the contest organizer. The current official rules always take precedence.
+This repository assembles the paper as Markdown (`paper.md`). It does not ship a LaTeX template and does not depend on Pandoc or any document converter; DOCX/PDF conversion is the user's responsibility. The assembled paper is not an official CUMCM template or an endorsement by the contest organizer. The current official rules always take precedence.
 
 ## Runtime dependencies
 
-Tools and libraries such as Python, Pandoc, and the Python packages listed in the requirements files are installed separately by the user. They are not vendored by this repository and remain subject to their own licenses.
+Tools and libraries such as Python and the Python packages listed in the requirements files are installed separately by the user. They are not vendored by this repository and remain subject to their own licenses.
 
 ## External research material
 

@@ -32,7 +32,7 @@
           "describe": "对照 competitions/cumcm/anti_patterns.md 42 条逐条核查；该清单是维护者启发式，不是官方评分线"
         },
         "5_pdf_compile_clean": {
-          "describe": "pandoc Markdown→DOCX 无报错, 章节编号完整, 图表不越界, 最终 PDF 渲染抽检通过"
+          "describe": "paper.md 装配完整无错, 章节编号齐全, 图表不越界, 用户渲染 DOCX/PDF 后抽检通过"
         }
       }
     }

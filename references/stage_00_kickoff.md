@@ -68,7 +68,7 @@ next: "stage_01_problem_selection | wait_for_prompt"
 **自动推断** (加载 `competitions/cumcm/README.md` 与 `topic_specs.json`):
 - 时长预算: 72h
 - 写作语言: 中文
-- 输出格式: Markdown → pandoc → DOCX
+- 输出格式: Markdown (装配为 `paper.md`; DOCX/PDF 由用户自行转换)
 - 题号对应的 task-type 路由候选（仅在题号真实可用后确认）
 
 题面未公布或尚未读取时，`problem_scan.subproblem_count` 与 `stages.5.qi_count` 保持 `null`；不得用历史题目或 `topic_specs.json` 猜默认子问数。
@@ -104,9 +104,6 @@ python -c "import numpy, scipy, sklearn, cvxpy, matplotlib, pandas, statsmodels,
 # 关键 solver 检查 (优化类必备)
 python -c "import cvxpy; assert 'GLPK_MI' in cvxpy.installed_solvers(), '需 pip install cvxopt'"
 
-# 文档转换工具
-pandoc --version           # Markdown → DOCX 转换
-
 which git
 ```
 
@@ -127,7 +124,7 @@ cp <skill>/templates/shared/decision_log.json state/decision_log.json   # 仅当
 | 项目 | 值 |
 |--------|-----------------------------------|
 | 竞赛 | CUMCM (固定) |
-| 输出格式 | Markdown → pandoc → DOCX |
+| 输出格式 | Markdown (装配为 `paper.md`) |
 | 时长 | 72h |
 | 语言 | 中文 |
 | 静态资料 | 91 份来源记录 / 59 份可提取样本观察 |

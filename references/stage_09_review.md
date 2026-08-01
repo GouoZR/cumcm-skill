@@ -2,7 +2,7 @@
 stage: 9
 name: review
 duration_h: 2-6
-inputs: ["paper.md", "paper.docx", "decision_log_full"]
+inputs: ["paper.md", "decision_log_full"]
 outputs:
   - "stage.9.{anti_patterns_check, compliance_checks, panel_scores, weakest_section, redo_log, red_team_record, submission_ready}"
 loads_reference:
@@ -57,7 +57,7 @@ Cross-check the final paper against `decision_log.json` and the saved artifacts:
 - fonts and colors are consistent and accessible;
 - tables use consistent units and precision;
 - there are no unresolved `??` references, missing glyphs, clipped figures, or broken page breaks;
-- all required sections are present in the assembled `paper.docx`, not merely on disk as detached `paper_workspace/*.md` files.
+- all required sections are present in the assembled `paper.md`, not merely on disk as detached `paper_workspace/*.md` files.
 
 ## 5. Run the five-view panel
 
@@ -81,7 +81,9 @@ With AI use, verify `support_materials/AI工具使用详情.pdf` is in the suppo
 
 ## 7. Assemble and inspect the final document
 
-Re-run the Stage 8 assembly (`references/stage_08_writing.md` §8) if any section changed since the last pass: concatenate the approved `paper_workspace/*.md` files into `paper.md`, then convert with pandoc into `paper.docx`. Compilation succeeds only when `paper.docx` exists, includes all intended sections in order, and pandoc reports no unresolved reference/image warnings. Visually inspect the first page, dense equations, wide tables, figure-heavy pages, references, appendices, and the AI disclosure after the user applies the current year's formatting in Word and exports the final submission PDF.
+Re-run the Stage 8 assembly (`references/stage_08_writing.md` §8) if any section changed since the last pass: concatenate the approved `paper_workspace/*.md` files into `paper.md`. The document is submission-ready only when `paper.md` exists, includes all intended sections in order, and has no unresolved figure/image references. Visually inspect the first page, dense equations, wide tables, figure-heavy pages, references, appendices, and the AI disclosure.
+
+The core deliverable of this skill is `paper.md`. If the team needs DOCX or PDF for submission, convert it yourself outside this skill (e.g., open `paper.md` in Word, or use a converter of your choice) and verify the final pages, pagination, and layout in that rendering.
 
 ## 8. Persist the final gate
 

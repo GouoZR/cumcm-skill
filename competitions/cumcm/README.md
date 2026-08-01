@@ -9,7 +9,7 @@
 | 时长 | 72 小时 (3 天) |
 | 队员 | 3 人 (建模 / 编程 / 写作) |
 | 语言 | 中文 |
-| 输出格式 | Markdown → pandoc → DOCX (用户自转 PDF) |
+| 输出格式 | Markdown (装配为 `paper.md`; DOCX/PDF 由用户自行转换) |
 | 概念图 | gpt-image-2 (PackyAPI) |
 | 数据图 | matplotlib / plotly |
 | 引用格式 | 按科技论文规范；仓库默认建议 GB/T 7714，提交前以当届要求为准 |

@@ -19,7 +19,7 @@
 | 状态在聊天记录里，换上下文就丢 | `decision_log.json` 持久化，换模型/重启/换人都不丢进度 |
 | 文献靠猜，引用心虚 | **Sciverse 4.66 亿论文**检索，全阶段可溯源引用 |
 | 一个人从头写到尾 | Stage 5 求解、Stage 8 写作**自动多 Agent 并行** |
-| 最后 LaTeX 折腾一晚上 | 全程 Markdown，一条命令转 DOCX，不碰 LaTeX |
+| 最后 LaTeX 折腾一晚上 | 全程 Markdown，交付即 `paper.md`，不碰 LaTeX |
 | 好不好全凭感觉 | **题型加权 + 59 份获奖论文经验分位**，verdict 由脚本重算 |
 
 ## 国赛 72 小时，为你省下三件事
@@ -33,7 +33,7 @@
 ## 10 个阶段
 
 | Stage | 任务 | 关键产物 | 主要检查 |
-|----:|------------------|-------------------------------------|--------------------------|
+|----:|------------------|-------------------------------------------------|--------------------------|
 | 0 | 团队启动与资料预扫 | 竞赛、角色、时限、环境、规则基线 | 可执行性与合规入口 |
 | 1 | 多题比较与选题 | 选择理由、放弃项、题型判断 | 资源匹配与失败风险 |
 | 2 | 问题拆解 | 子问、变量、约束、依赖图 | 逻辑完整性 |
@@ -42,8 +42,8 @@
 | 5 | 递归求解 Q1…Qn | formulation、代码、结果、图表 | per-Qi 评分与定向回修 |
 | 6 | 稳健性分析 | 风险匹配的验证、稳健区间、失败边界 | 灵敏度与结论可靠性 |
 | 7 | 模型评价 | 优点、局限、改进、迁移条件 | 边界是否诚实、结论能否推广 |
-| 8 | 论文装配 | `paper_workspace/*.md`、DOCX、AI 台账 | 跨阶段一致性与格式合规 |
-| 9 | 提交前终审 | 最终 DOCX/PDF、支持材料、Panel 记录 | 合规门、证据链与视觉检查 |
+| 8 | 论文装配 | `paper_workspace/*.md` 装配为 `paper.md`、AI 台账 | 跨阶段一致性与格式合规 |
+| 9 | 提交前终审 | 最终 `paper.md`、支持材料、Panel 记录 | 合规门、证据链与视觉检查 |
 
 ## 反馈模式
 
@@ -63,7 +63,7 @@
 
 | 竞赛包 | 语言与模板 | 当前材料 | 可信度说明 |
 |--------------|------------------------------|---------------------------------------------------------------------------------|----------------------------------------|
-| **CUMCM 国赛** | 中文；Markdown → DOCX (Pandoc) | 收集 91 份公开论文源样本，其中 59 份成功提取文本并进入统计；42 项维护者反模式检查 | 观察分位不是官方门槛，规则以当届通知为准 |
+| **CUMCM 国赛** | 中文；Markdown 交付 | 收集 91 份公开论文源样本，其中 59 份成功提取文本并进入统计；42 项维护者反模式检查 | 观察分位不是官方门槛，规则以当届通知为准 |
 
 截至 2026-08-01，仓库已核对：
 
@@ -89,7 +89,7 @@ PACKYAPI_TOKEN="你的PackyAPI Sora令牌"   # https://www.packyapi.com
 
 # 4. 可选：赛前 preflight 检查
 python ~/.claude/skills/cumcm-skill/scripts/doctor.py \
-  --competition cumcm --skip-tools
+  --competition cumcm
 
 # 5. 进入建模项目，启动
 mkdir -p my-modeling-project
@@ -113,14 +113,14 @@ claude
 
 ### 可选：完整数值环境
 
-核心工作流和 `scripts/doctor.py --skip-tools` 不依赖完整的科学计算栈。只有在需要运行仓库中的建模起步代码时，才需要安装额外依赖：
+核心工作流和 `scripts/doctor.py` 不依赖完整的科学计算栈。只有在需要运行仓库中的建模起步代码时，才需要安装额外依赖：
 
 ```bash
 python -m pip install -r \
   ~/.claude/skills/cumcm-skill/templates/shared/requirements.txt
 ```
 
-正式进行论文转换时，还需要安装 [Pandoc](https://pandoc.org/installing.html)（Markdown → DOCX）。
+本 skill 交付 Markdown；如需 DOCX/PDF，请自行转换（例如在 Word 中打开 `paper.md`）。
 
 ## 工作区产物
 
@@ -131,7 +131,7 @@ my-modeling-project/
 ├── results/                    # 结构化结果与可复现实验输出
 ├── figures/                    # 最终图表（PNG ≥300 DPI + SVG）
 ├── paper_workspace/            # 01_abstract.md … 11_ai_use_report.md
-├── paper_output/               # 最终 DOCX/PDF
+├── paper_output/               # 用户自行转换 DOCX/PDF 的输出目录（可选）
 └── support_materials/          # 代码、数据清单与竞赛要求的披露材料
 ```
 
@@ -141,7 +141,7 @@ my-modeling-project/
 
 | 工具 | 用途 | 典型调用 |
 |-----------------------------------|-----------------------------------------------------|-------------------------------------------------------------------|
-| `scripts/doctor.py` | 检查 skill 结构、竞赛包、环境与工作区 | `python <skill>/scripts/doctor.py --competition cumcm --skip-tools` |
+| `scripts/doctor.py` | 检查 skill 结构、竞赛包与工作区 | `python <skill>/scripts/doctor.py --competition cumcm` |
 | `scripts/score_artifact.py` | 校验 critic JSON、重算加权分数与 verdict、聚合 per-Qi | `python <skill>/scripts/score_artifact.py --stage 5 --critique ...` |
 | `scripts/extract_diff.py` | 生成并应用 section-level patch | `python <skill>/scripts/extract_diff.py --apply ...` |
 | `scripts/render_ai_usage.py` | 根据台账生成 CUMCM AI 使用披露材料 | `python <skill>/scripts/render_ai_usage.py --competition cumcm ...` |
@@ -173,9 +173,9 @@ tests/                           # 回归测试与 fixture
 
 ## v1.0
 
-v1.0 是 cumcm-skill 作为独立 skill 的第一个版本。它基于 [mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0, 作者: 徐子锐) 深度定制，并移除了上游的 MCM/电工杯支持、Codex 兼容层与 LaTeX 输出。
+v1.0 是 cumcm-skill 作为独立 skill 的第一个版本。它基于 [mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0, 作者: 徐子锐) 深度定制，并移除了上游的 MCM/电工杯支持、Codex 兼容层、LaTeX 与 Pandoc 依赖。
 
-- 专精 CUMCM 国赛，Claude Code 独占，Markdown + DOCX (Pandoc) 输出管线
+- 专精 CUMCM 国赛，Claude Code 独占，Markdown 交付（DOCX/PDF 由用户自行转换）
 - 集成 Sciverse MCP 真实文献检索，全阶段可溯源引用
 - 支持多 Agent 并行求解/写作/文献查阅
 - PackyAPI gpt-image-2 概念图 + Python 数据图双轨图表系统
@@ -200,7 +200,7 @@ cumcm-skill 是协作与质量控制工具，不是自动获奖系统。
 ```bash
 python -m compileall -q scripts templates/shared/code_starter
 python -m unittest discover -s tests -p 'test_*.py' -v
-python scripts/doctor.py --competition cumcm --skip-tools
+python scripts/doctor.py --competition cumcm
 ```
 
 当工作流、模板或竞赛包发生变化时，请同步更新测试、版本号和规则核对日期。

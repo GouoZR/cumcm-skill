@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Preflight checks for the mathmodel-skill package and local toolchain."""
+"""Preflight checks for the cumcm-skill package."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import argparse
 import importlib.util
 import json
 import re
-import shutil
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -71,8 +70,6 @@ def _anti_pattern_count(path: Path) -> int:
 def run_checks(
     competition: str,
     workspace: Path | None = None,
-    check_tools: bool = True,
-    require_renderer: bool = False,
     require_modeling: bool = False,
 ) -> list[Check]:
     checks: list[Check] = []
@@ -230,20 +227,6 @@ def run_checks(
                 "Start the skill once; the agent will initialize state automatically.",
             ))
 
-    if check_tools:
-        pandoc_ok = shutil.which("pandoc") is not None
-        pandoc_check = _check if require_renderer else _optional
-        checks.append(pandoc_check(
-            "pandoc",
-            pandoc_ok,
-            "pandoc found" if pandoc_ok else (
-                "pandoc not found; formal compilation is unavailable "
-                "(structural --no-compile remains available)"
-            ),
-            "Install Pandoc before formal paper compilation."
-            if not pandoc_ok else None,
-        ))
-
     if require_modeling:
         missing_modules = [name for name in MODELING_MODULES if importlib.util.find_spec(name) is None]
         checks.append(_check(
@@ -277,23 +260,16 @@ def main() -> int:
         except (AttributeError, ValueError, OSError):
             pass
 
-    parser = argparse.ArgumentParser(description="Check mathmodel-skill readiness.")
+    parser = argparse.ArgumentParser(description="Check cumcm-skill readiness.")
     parser.add_argument("--competition", choices=COMPETITIONS, default="cumcm")
     parser.add_argument("--workspace", type=Path, default=None)
     parser.add_argument("--json", action="store_true", dest="as_json")
-    parser.add_argument("--skip-tools", action="store_true", help="skip local Pandoc/TeX checks")
-    parser.add_argument("--require-renderer", action="store_true")
     parser.add_argument("--require-modeling", action="store_true")
     args = parser.parse_args()
-
-    if args.skip_tools and args.require_renderer:
-        parser.error("--require-renderer 不能与 --skip-tools 同时使用")
 
     checks = run_checks(
         competition=args.competition,
         workspace=args.workspace.resolve() if args.workspace else None,
-        check_tools=not args.skip_tools,
-        require_renderer=args.require_renderer,
         require_modeling=args.require_modeling,
     )
     if args.as_json:

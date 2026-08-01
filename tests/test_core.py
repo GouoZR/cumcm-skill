@@ -521,7 +521,7 @@ class DoctorTests(unittest.TestCase):
     def test_all_competition_preflights_pass(self) -> None:
         for competition in doctor.COMPETITIONS:
             with self.subTest(competition=competition):
-                checks = doctor.run_checks(competition, check_tools=False)
+                checks = doctor.run_checks(competition)
                 failures = [
                     f"{item.name}: {item.detail}"
                     for item in checks
@@ -542,17 +542,13 @@ class DoctorTests(unittest.TestCase):
             state["competition"] = "cumcm"
             state_path.write_text(json.dumps(state), encoding="utf-8")
 
-            checks = doctor.run_checks(
-                "cumcm", workspace=workspace, check_tools=False
-            )
+            checks = doctor.run_checks("cumcm", workspace=workspace)
             workspace_check = next(
                 item for item in checks if item.name == "workspace-state"
             )
             self.assertEqual(workspace_check.status, "pass")
 
-            mismatch = doctor.run_checks(
-                "other_competition", workspace=workspace, check_tools=False
-            )
+            mismatch = doctor.run_checks("other_competition", workspace=workspace)
             mismatch_check = next(
                 item for item in mismatch if item.name == "workspace-state"
             )
@@ -560,44 +556,11 @@ class DoctorTests(unittest.TestCase):
 
             state["current_stage"] = True
             state_path.write_text(json.dumps(state), encoding="utf-8")
-            boolean_stage = doctor.run_checks(
-                "cumcm", workspace=workspace, check_tools=False
-            )
+            boolean_stage = doctor.run_checks("cumcm", workspace=workspace)
             boolean_check = next(
                 item for item in boolean_stage if item.name == "workspace-state"
             )
             self.assertEqual(boolean_check.status, "fail")
-
-    def test_require_renderer_and_skip_tools_are_mutually_exclusive(self) -> None:
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(ROOT / "scripts" / "doctor.py"),
-                "--competition",
-                "cumcm",
-                "--skip-tools",
-                "--require-renderer",
-            ],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-        )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("不能与", result.stderr)
-
-    def test_require_renderer_makes_missing_pandoc_a_failure(self) -> None:
-        def fake_which(command: str) -> str | None:
-            return None if command == "pandoc" else f"/usr/bin/{command}"
-
-        with mock.patch.object(doctor.shutil, "which", side_effect=fake_which):
-            checks = doctor.run_checks(
-                "cumcm", check_tools=True, require_renderer=True
-            )
-
-        pandoc_check = next(item for item in checks if item.name == "pandoc")
-        self.assertEqual(pandoc_check.status, "fail")
-        self.assertIn("formal compilation is unavailable", pandoc_check.detail)
 
 
 class DecisionLogSchemaTests(unittest.TestCase):
