@@ -82,6 +82,8 @@ OUTPUT EXACTLY THIS JSON, NO OTHER TEXT:
     // 仅评 stage 8 / 9 时填; 其他 stage 留空
   },
   "verdict": "pass_early" | "pass" | "pass_with_review" | "refine" | "refine_partial" | "block"
+  // ⚠️ 此字段仅供参考，**最终 verdict 由 score_artifact.py 按 scores/issues 重算**（见 §3）。
+  //     Critic 可填自己的判断，但与脚本结果不一致时以脚本为准，Critic 不应因“填了 pass 就跳过精修”。
 }
 ```
 

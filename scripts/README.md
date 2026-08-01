@@ -35,6 +35,36 @@ python scripts/score_artifact.py \
   --decision-log /path/to/project/state/decision_log.json
 ```
 
+**`aggregate_qi` 输入 schema**（`--qi-results` JSON 文件）:
+
+```json
+{
+  "qi_results": [
+    {
+      "qi": "Q1",
+      "min": 8,
+      "mean": 8.2,
+      "scores": {
+        "1_problem_fit": {"score": 8},
+        "2_math_rigor": {"score": 8},
+        "3_solve_correctness": {"score": 8},
+        "4_visualization": {"score": 8},
+        "5_physical_meaning": {"score": 9}
+      },
+      "issues": []
+    }
+  ],
+  "qi_weights": [1.0, 1.0, 1.0]
+}
+```
+
+字段要求：
+- `qi_results[i].qi` — 子问 ID，必须形如 `Q1`/`Q2`，不能重复
+- `qi_results[i].scores` — 必须是 5 维对象，每维是 `{"score": 1-10}`，缺任一维即失败
+- `qi_results[i].min` / `mean` — 必须与 `scores` 实际计算一致（脚本会重算校验，不符报错）
+- `qi_results[i].issues` — 数组，每条含 `severity`(high/medium/low) + `where` + `fix`，最多 5 条
+- `qi_weights` — 长度必须等于 `qi_results` 数量，默认均匀 `[1.0]*n`
+
 ### `extract_diff.py` — 定向修补辅助器
 
 根据 Critic 指出的问题生成 section patch prompt，或应用已经生成的 section patch / unified diff。它的价值是缩小修改范围并保留已通过章节；实际节省量取决于论文和修补范围，不设固定比例。

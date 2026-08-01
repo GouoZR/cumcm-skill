@@ -1,5 +1,5 @@
 {
-  "_doc": "CUMCM 题号与 task_type 路由提示。只用于候选题导航和评分权重 fallback；题型、交付物与子问数必须从当届题面重新提取。",
+  "_doc": "CUMCM 题号与 task_type 路由提示。只用于候选题导航和评分权重 fallback；primary_type/typical_problems 是维护者对历年真题的启发式概括，同一题号不同年份题型可能不同，题型、交付物与子问数必须从当届题面重新提取，不得只依赖本表描述。",
   "competition": "cumcm",
   "official_name": "全国大学生数学建模竞赛",
   "duration_h": 72,
@@ -28,9 +28,9 @@
     "C": {
       "label": "C 题",
       "category": "本科组-数据/统计",
-      "primary_type": "data_analysis",
+      "primary_type": "optimization",
       "task_type_key": "C_data",
-      "typical_problems": ["数据预处理", "回归/时序/聚类", "异常检测"],
+      "typical_problems": ["数据驱动优化", "多期/资源配置规划", "不确定性与风险决策"],
       "expected_subproblem_count": null
     },
     "D": {

@@ -175,7 +175,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 
 各阶段额外加载:
 - 每阶段开头/结尾: `<cwd>/state/decision_log.json` 必读/必写
-- stage 1-9: `references/rubrics.md` 对应章节
+- stage 1-9: `references/rubrics.md` 对应章节 + `references/feedback_layer1_critic.md` (L1 JSON 输出协议, 评分前必读)
 - **stage 1**: `competitions/cumcm/topic_specs.json`
 - **stage 3**: `competitions/cumcm/distilled_naming.md` (按需: 命名变体模板, 与 winning_patterns §4 互补)
 - stage 3, 5: `references/model_catalog.md` + `references/algorithms/` 对应算法
