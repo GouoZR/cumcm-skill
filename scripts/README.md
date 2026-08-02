@@ -26,7 +26,20 @@ python scripts/score_artifact.py \
 
 不传 `--decision-log` 时，脚本按 `CUMCM_STATE_DIR`、兼容变量 `MATHMODEL_STATE_DIR`、最后 `<cwd>/state/decision_log.json` 的顺序解析路径。
 
-所有子问完成后，可聚合 per-Qi 结果并把 `qi_status`、`review_qis`、`refine_qis` 与最终 verdict 原子写回 Stage 5：
+所有子问完成后，可聚合 per-Qi 结果并把 `qi_status`、`review_qis`、`refine_qis` 与最终 verdict 原子写回 Stage 5。
+
+**推荐（multi-Agent 并行安全）**: stage 5 冠军模式下各求解 Agent 把 critique 写到独立 `qi_critiques/qi_<id>.json`（每 Qi 唯一文件，无共享文件竞争），主 Agent 统一聚合。写入可用 `score_artifact.write_qi_critique(critique, state_dir)`（Python 函数，每 Qi 唯一文件原子写），主 Agent 聚合：
+
+```bash
+python scripts/score_artifact.py \
+  --mode aggregate_qi \
+  --qi-critiques-dir /path/to/project/state/qi_critiques \
+  --decision-log /path/to/project/state/decision_log.json
+```
+
+自动读 `qi_critiques/` 下所有 `qi_*.json` → `compute_stage5_verdict` → 一次性写入 `stages.5` 聚合节点。每个 `qi_<id>.json` 须含 `qi_id`/`qi`、`scores`(5维)、`min`、`mean`、`issues`。
+
+**兼容旧流程**: 也可用 `--qi-results` 手工 JSON 文件（`--qi-critiques-dir` 优先，二选一）：
 
 ```bash
 python scripts/score_artifact.py \

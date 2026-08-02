@@ -467,6 +467,80 @@ class ScoreArtifactTests(unittest.TestCase):
                     )
 
 
+class QiCritiqueFileTests(unittest.TestCase):
+    """Stage 5 per-Qi 独立文件写入与聚合 (multi-Agent 并行安全)."""
+
+    def _critique(self, qi_id: str, min_score: int = 8, mean: float = 8.0,
+                  has_high_issue: bool = False) -> dict:
+        issues = []
+        if has_high_issue:
+            issues = [{"severity": "high", "where": "Q1", "fix": "x"}]
+        return {
+            "qi_id": qi_id,
+            "iteration": 0,
+            "scores": {f"dim_{i}": {"score": 8} for i in range(1, 6)},
+            "min": min_score,
+            "mean": mean,
+            "verdict": "pass",
+            "issues": issues,
+        }
+
+    def test_write_qi_critique_isolated_per_qi(self) -> None:
+        """每个 Qi 写独立文件, 并发写不同 Qi 互不覆盖 (方案1 核心)."""
+        with tempfile.TemporaryDirectory() as temp:
+            state_dir = Path(temp)
+            p1 = score_artifact.write_qi_critique(self._critique("Q1"), state_dir)
+            p2 = score_artifact.write_qi_critique(self._critique("Q2"), state_dir)
+            self.assertEqual(p1.name, "qi_Q1.json")
+            self.assertEqual(p2.name, "qi_Q2.json")
+            self.assertNotEqual(p1, p2)
+            # 两个文件都在, 内容各自完整
+            self.assertEqual(json.loads(p1.read_text(encoding="utf-8"))["qi_id"], "Q1")
+            self.assertEqual(json.loads(p2.read_text(encoding="utf-8"))["qi_id"], "Q2")
+
+    def test_write_qi_critique_same_qi_overwrites_in_place(self) -> None:
+        """同一 Qi 重复写是原地替换, 不产生残留临时文件. 原子性验证."""
+        with tempfile.TemporaryDirectory() as temp:
+            state_dir = Path(temp)
+            p = score_artifact.write_qi_critique(self._critique("Q1"), state_dir)
+            first = p.read_text(encoding="utf-8")
+            # 第二次写 (迭代) 覆盖同一路径
+            score_artifact.write_qi_critique(self._critique("Q1", min_score=9), state_dir)
+            second = p.read_text(encoding="utf-8")
+            self.assertNotEqual(first, second)
+            self.assertEqual(json.loads(second)["min"], 9)
+            # 无残留临时文件
+            self.assertEqual(list(state_dir.rglob("*.tmp")), [])
+
+    def test_load_qi_critiques_dir_aggregates_sorted(self) -> None:
+        """聚合读取目录下所有 qi 文件, 按 qi_id 排序, 输出可直接喂 verdict."""
+        with tempfile.TemporaryDirectory() as temp:
+            state_dir = Path(temp)
+            score_artifact.write_qi_critique(self._critique("Q1"), state_dir)
+            score_artifact.write_qi_critique(self._critique("Q5"), state_dir)
+            score_artifact.write_qi_critique(self._critique("Q3"), state_dir)
+            items = score_artifact.load_qi_critiques_dir(
+                state_dir / score_artifact.QI_CRITIQUES_DIR
+            )
+            self.assertEqual([i["qi"] for i in items], ["Q1", "Q3", "Q5"])
+            self.assertTrue(all("scores" in i and "issues" in i for i in items))
+            # 可直接喂 compute_stage5_verdict
+            result = score_artifact.compute_stage5_verdict(items, None)
+            self.assertEqual(result["verdict"], "pass")
+
+    def test_load_qi_critiques_dir_rejects_missing_qi_id(self) -> None:
+        """聚合时发现缺 qi_id 的文件必须报错, 不静默跳过."""
+        with tempfile.TemporaryDirectory() as temp:
+            state_dir = Path(temp)
+            bad = state_dir / score_artifact.QI_CRITIQUES_DIR / "qi_X.json"
+            bad.parent.mkdir(parents=True)
+            bad.write_text(json.dumps({"min": 8}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "缺少 qi_id"):
+                score_artifact.load_qi_critiques_dir(
+                    state_dir / score_artifact.QI_CRITIQUES_DIR
+                )
+
+
 class ExtractDiffTests(unittest.TestCase):
     def test_apply_mode_does_not_require_critique(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

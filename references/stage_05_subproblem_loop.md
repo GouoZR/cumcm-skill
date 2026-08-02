@@ -136,6 +136,42 @@ results = parallel([
 cross_check(results)
 ```
 
+### per-Qi 独立文件写入协议 (并行安全, 必做)
+
+> 多个求解 Agent 并行时, **禁止各自直接写共享的 decision_log**。
+> `update_decision_log` 的 per_qi 分支是"整文件读→改→写回", 两个 Agent 同时读到旧版时后写者会覆盖先写者的条目
+> (`_atomic_write_json` 只防 JSON 损坏, 不防逻辑丢失)。
+
+每个求解 Agent 把 critique 写到**独立文件** (每 Qi 唯一, 无竞争):
+
+```python
+# 各求解 Agent (并行, 互不干扰):
+python scripts/score_artifact.py --mode normal --stage 5 \
+  --variant per_qi --qi-id Q1 \
+  --critique state/qi_critiques/qi_Q1.json \
+  --decision-log <project>/state/decision_log.json
+# 或直接用脚本函数:
+from scripts import score_artifact
+score_artifact.write_qi_critique(critique, state_dir=Path("<project>/state"))
+# 输出: <project>/state/qi_critiques/qi_<id>.json  (原子写, 每 Qi 唯一文件)
+```
+
+主 Agent **统一聚合** (单写者, 安全) 写入 decision_log:
+
+```bash
+# 主 Agent, 所有 Qi 完成后聚合:
+python scripts/score_artifact.py --mode aggregate_qi \
+  --qi-critiques-dir <project>/state/qi_critiques \
+  --decision-log <project>/state/decision_log.json
+# 自动读目录下所有 qi_*.json → compute_stage5_verdict → update_stage5_aggregate
+# 一次性写入 stages.5 聚合节点 (qi_status/review_qis/refine_qis/verdict)
+```
+
+- `qi_<id>.json` 内容须含: `qi_id`/`qi`, `scores` (5 维对象), `min`, `mean`, `issues` (每条含 severity)
+- 聚合读目录时自动按 `qi_id` 排序, 生成 `qi_results` 喂给 `compute_stage5_verdict`
+- 旧 `--qi-results <file>` 手工 JSON 仍兼容 (不传 `--qi-critiques-dir` 时使用)
+- 跨 Qi 一致性检查 (H) 在聚合前后各跑一次: 聚合前各 Qi 独立, 聚合后核对符号/数值互引
+
 ### 串行回退
 
 当用户选择串行模式或 Qi 间存在强依赖时:
@@ -145,7 +181,7 @@ for Qi in [Q1, Q2, ..., Qn]:
     1. 单 Agent 跑 A→G
     2. 子检查点 H
     3. 文献检索 (如需)
-    4. 写入 decision_log
+    4. 写独立 qi_<id>.json (不进共享 decision_log)
 ```
 
 ---
@@ -160,7 +196,7 @@ for Qi in [Q1, Q2, ..., Qn]:
     D. 有证据需要时做子灵敏度
     E. 物理意义 (15 min)
     F. L1 自评 + 必要时 diff-only 精修
-    G. 输出移交 (写 decision_log)
+    G. 输出移交 (写独立 qi_<id>.json, 不进共享 decision_log)
     H. 子检查点: Qi 的依赖/独立理由是否成立? 符号是否与 stage 4 一致?
 ```
 

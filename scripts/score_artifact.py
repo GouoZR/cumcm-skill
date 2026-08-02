@@ -576,7 +576,10 @@ def _atomic_write_json(path: Path, value: dict) -> None:
 
         # NamedTemporaryFile defaults to 0600. Preserve the existing state file's
         # permissions so an atomic update does not surprise a shared workspace.
-        os.chmod(temp_path, path.stat().st_mode)
+        # For a brand-new file (e.g. first write of a per-Qi critique), there is
+        # no pre-existing mode to copy; leave the temp file's default permission.
+        if path.exists():
+            os.chmod(temp_path, path.stat().st_mode)
         os.replace(temp_path, path)
         temp_path = None
     finally:
@@ -638,6 +641,71 @@ def read_decision_log(decision_log_path: Path) -> dict:
         return {}
     with open(decision_log_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+# ============================================================================
+# Stage 5 并行 per-Qi 写入 (multi-Agent 安全)
+#
+# 背景: stage_05 冠军模式让多个求解 Agent 并行求解各 Qi, 各自产出 critique。
+# 若所有 Agent 都直接写共享的 decision_log, 会产生"整文件读→改→写回"的
+# 读-改-写竞争: 两个 Agent 同时读到旧版, 后写者覆盖先写者的条目。
+# `_atomic_write_json` 只防 JSON 损坏, 不防逻辑丢失。
+#
+# 方案: 每个 Qi 的 critique 写到**独立文件** `qi_critiques/qi_<id>.json`,
+#       消除共享单文件竞争 (每 Qi 唯一文件, 原子替换天然无覆盖)。
+#       主 Agent 汇总时再从目录聚合读取 → 统一写入 decision_log (单写者)。
+# ============================================================================
+
+QI_CRITIQUES_DIR = "qi_critiques"
+
+
+def qi_critique_path(state_dir: Path, qi_id: str) -> Path:
+    """per-Qi critique 独立文件路径: <state>/qi_critiques/qi_<id>.json"""
+    safe = "".join(ch for ch in str(qi_id) if ch.isalnum() or ch in "-_") or "qi"
+    return state_dir / QI_CRITIQUES_DIR / f"qi_{safe}.json"
+
+
+def write_qi_critique(critique: dict, state_dir: Path) -> Path:
+    """
+    把一个 Qi 的 critique 原子写入独立文件 (multi-Agent 并行安全)。
+    每个 Qi 对应唯一文件, 并发写不同 Qi 互不覆盖。
+    """
+    qi_id = critique.get("qi_id") or critique.get("qi")
+    if not qi_id:
+        raise ValueError("critique 缺少 qi_id/qi 字段, 无法定位独立文件")
+    out = qi_critique_path(state_dir, qi_id)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write_json(out, critique)
+    return out
+
+
+def load_qi_critiques_dir(crit_dir: Path) -> list:
+    """
+    聚合读取 qi_critiques/ 目录下所有 per-Qi critique, 按 qi_id 排序。
+    返回 [{qi, min, mean, scores, issues, ...}] 可直接喂 compute_stage5_verdict。
+    传入的是 qi_critiques 目录本身 (CLI --qi-critiques-dir 语义)。
+    """
+    crit_dir = Path(crit_dir)
+    if not crit_dir.is_dir():
+        return []
+    items = []
+    for path in sorted(crit_dir.glob("qi_*.json")):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+        except (json.JSONDecodeError, OSError) as exc:
+            raise ValueError(f"qi critique 文件解析失败 {path}: {exc}") from exc
+        qi_id = raw.get("qi_id") or raw.get("qi")
+        if not qi_id:
+            raise ValueError(f"qi critique 缺少 qi_id/qi: {path}")
+        items.append({
+            "qi": qi_id,
+            "min": raw.get("min", raw.get("min_score")),
+            "mean": raw.get("mean", raw.get("mean_score")),
+            "scores": raw.get("scores"),
+            "issues": raw.get("issues", []),
+        })
+    return items
 
 
 def update_stage5_aggregate(result: dict, qi_results: list, qi_weights: list | None,
@@ -704,23 +772,47 @@ def decide_next_action(critique: dict, max_iter: int = 3,
 # ============================================================================
 
 def cmd_aggregate_qi(args):
-    """子命令: stage 5 多 Qi 聚合"""
-    qi_results_path = Path(args.qi_results)
-    if not qi_results_path.exists():
-        print(f"[FAIL] {qi_results_path} 不存在")
-        return 1
+    """子命令: stage 5 多 Qi 聚合
 
-    try:
-        with open(qi_results_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as exc:
-        print(f"[FAIL] qi-results 不是有效 JSON: {exc}")
-        return 1
-    if not isinstance(data, dict):
-        print("[FAIL] qi-results 根节点必须是 object")
-        return 1
-    qi_results = data.get("qi_results", [])
-    qi_weights = data.get("qi_weights")
+    两种输入来源 (二选一):
+    - --qi-critiques-dir <dir>: 并行 Agent 写入的 qi_critiques/ 目录, 自动聚合 (推荐, 无竞争)
+    - --qi-results <file>:     手工维护的 {qi_results:[...], qi_weights:[...]} JSON (兼容旧流程)
+    """
+    qi_results = None
+    qi_weights = None
+
+    if getattr(args, "qi_critiques_dir", None):
+        crit_dir = Path(args.qi_critiques_dir)
+        if not crit_dir.is_dir():
+            print(f"[FAIL] qi-critiques-dir 不存在: {crit_dir}")
+            return 1
+        try:
+            qi_results = load_qi_critiques_dir(crit_dir)
+        except ValueError as exc:
+            print(f"[FAIL] 聚合 qi_critiques 失败: {exc}")
+            return 1
+        if not qi_results:
+            print(f"[FAIL] {crit_dir} 下没有 qi_*.json 文件")
+            return 1
+        qi_weights = None
+        source_desc = f"{crit_dir} (自动聚合 {len(qi_results)} 个 Qi)"
+    else:
+        qi_results_path = Path(args.qi_results)
+        if not qi_results_path.exists():
+            print(f"[FAIL] {qi_results_path} 不存在")
+            return 1
+        try:
+            with open(qi_results_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except json.JSONDecodeError as exc:
+            print(f"[FAIL] qi-results 不是有效 JSON: {exc}")
+            return 1
+        if not isinstance(data, dict):
+            print("[FAIL] qi-results 根节点必须是 object")
+            return 1
+        qi_results = data.get("qi_results", [])
+        qi_weights = data.get("qi_weights")
+        source_desc = str(qi_results_path)
 
     try:
         result = compute_stage5_verdict(qi_results, qi_weights)
@@ -734,7 +826,7 @@ def cmd_aggregate_qi(args):
     except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
         print(f"[FAIL] 无法写入 Stage 5 聚合状态: {exc}")
         return 1
-    print(f"Stage 5 per-Qi 聚合 (n={len(qi_results)})")
+    print(f"Stage 5 per-Qi 聚合 (n={len(qi_results)}) 来源: {source_desc}")
     print(json.dumps(result, ensure_ascii=False, indent=2))
     print(f"[OK] written: {decision_log_path}")
     return 0
@@ -764,12 +856,14 @@ def main():
     parser.add_argument("--mode", choices=["normal", "aggregate_qi"], default="normal",
                         help="aggregate_qi: stage 5 多 Qi 加权聚合 (需 --qi-results)")
     parser.add_argument("--qi-results", type=str,
-                        help="aggregate_qi 模式: {qi_results: [...], qi_weights: [...]} JSON 文件")
+                        help="aggregate_qi 模式(兼容): {qi_results: [...], qi_weights: [...]} JSON 文件")
+    parser.add_argument("--qi-critiques-dir", type=str, default=None,
+                        help="aggregate_qi 模式(推荐): qi_critiques/ 目录, 自动聚合并行 Agent 写入的 per-Qi critique")
     args = parser.parse_args()
 
     if args.mode == "aggregate_qi":
-        if not args.qi_results:
-            print("[FAIL] mode=aggregate_qi 需 --qi-results")
+        if not args.qi_results and not args.qi_critiques_dir:
+            print("[FAIL] mode=aggregate_qi 需 --qi-critiques-dir 或 --qi-results (二选一)")
             return 1
         return cmd_aggregate_qi(args)
 
