@@ -274,7 +274,7 @@ paper_workspace/
 - 格式: PNG (位图) + SVG (可编辑矢量)
 - 配色: 遵循 `可视化规范.md` 中的 CUMCM 配色方案
 - 字体: 中文宋体/英文 Times New Roman，字号 ≥8pt
-- 每张图跑 `scripts/plot_style.py` 统一风格
+- 每张图跑 `references/visualization/plot_style.py` 统一风格
 
 ### 概念图规范
 
@@ -312,7 +312,7 @@ paper_workspace/
 
 ```
 对每条引用:
-  1. Sciverse agentic-search 验证文献存在
+  1. Sciverse `search_papers`/`semantic_search` 验证文献存在
   2. 获取完整元数据 (作者/标题/期刊/卷期/页码/DOI)
   3. 格式化为 GB/T 7714
   4. 记录 doc_id 到 decision_log.sciverse_queries (可溯源)

@@ -15,7 +15,7 @@
 - Submit the paper and supporting materials as two separate electronic files.
 - The paper file must be PDF or Word and no larger than 20 MB; PDF is recommended.
 - The electronic paper must not include the commitment form or numbering page. Its first page must be the abstract page.
-- Use A4 paper with margins of at least 2.5 cm on every side. The repository template uses 12 pt and CTeX defaults as maintainable defaults, not as an official font or line-spacing mandate.
+- Use A4 paper with margins of at least 2.5 cm on every side. The repository template uses 12 pt as a maintainable default; font and line spacing follow the current official rules, not any LaTeX/CTeX convention.
 - Do not include a table of contents.
 - The main text begins after the abstract page and is limited to 30 pages; appendices follow the main text and are outside that main-text limit.
 - Do not expose team-member, school, or regional identity anywhere in the abstract, body, appendix, metadata, or supporting files.

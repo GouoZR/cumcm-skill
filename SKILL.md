@@ -48,7 +48,7 @@ description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。U
 | 文献检索 | `references/sciverse_guide.md` | Sciverse MCP 接入指南 |
 | 用户产物 | 用户工作目录的相对路径 | `<cwd>/state/`, `<cwd>/results/`, `<cwd>/figures/`, `<cwd>/paper_workspace/` |
 | state 持久化 | `<cwd>/state/decision_log.json` | 各 stage 必读必写 |
-| 环境变量 | `CUMCM_STATE_DIR`（兼容 `MATHMODEL_STATE_DIR`）/ `SCIVERSE_API_TOKEN` / `PACKYAPI_TOKEN` | scripts 路径解析与外部服务 |
+| 环境变量 | `CUMCM_STATE_DIR`（兼容 `MATHMODEL_STATE_DIR`）/ `CUMCM_COMPETITION`（兼容 `MATHMODEL_COMPETITION`）/ `SCIVERSE_API_TOKEN` / `PACKYAPI_TOKEN` | scripts 路径/竞赛解析与外部服务 |
 
 约定: `<skill>/` = skill 安装目录 (`~/.claude/skills/cumcm-skill/`), `<cwd>/` = 用户 cwd。
 

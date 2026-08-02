@@ -41,6 +41,3 @@ reportlab>=4.0       # render_ai_usage.py 生成 CUMCM AI 使用详情 PDF
 
 # Diff 处理 (extract_diff.py 的 unidiff 模式)
 unidiff>=0.7
-
-# 渲染 (paper.md -> paper.docx)
-# pandoc 是 binary, 不在 pip 内, 需另装: https://pandoc.org/installing.html

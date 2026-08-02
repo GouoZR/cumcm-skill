@@ -66,7 +66,7 @@ r = httpx.post(f"{BASE}/agentic-search", json={
 场景: 搜"物流配送路径优化的最新方法"
   → semantic_search("logistics vehicle routing optimization 2024")
   → 返回带引用的证据 chunks + doc_id
-  → 对关键 chunk 调 content(doc_id, offset) 扩展上下文
+  → 对关键 chunk 调 read_content(doc_id, offset) 扩展上下文
   → 对感兴趣的方法调 list_paper_relations(doc_id) 找更多相关工作
 ```
 
@@ -117,7 +117,7 @@ semantic_search: "<模型名> implementation Python"
 semantic_search: "<方法> hyperparameter tuning"
 semantic_search: "<方法> convergence analysis"
 semantic_search: "<方法> improved version 改进"
-content: 对关键方法的原文细节进行核验
+read_content: 对关键方法的原文细节进行核验
 ```
 
 输出: 每个子问题的求解策略有文献支撑。
@@ -171,9 +171,9 @@ semantic_search: "农作物种植 多目标优化 鲁棒"
 ### 去重与质量控制
 
 1. 同一主题多轮检索 → 按 doc_id 去重 (记录到 decision_log.sciverse_queries)
-2. 优先 OA (开放获取) 论文 (content API 可读全文)
+2. 优先 OA (开放获取) 论文 (read_content 可读全文)
 3. 优先高引论文 (search_papers 按 citations 排序)
-4. 核验: 关键证据调 content API 读原文确认
+4. 核验: 关键证据调 read_content 读原文确认
 5. 文献 Agent 在 Stage 8 对所有引用执行核验
 
 ---

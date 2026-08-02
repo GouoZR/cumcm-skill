@@ -338,7 +338,7 @@ plt.savefig("figures/Q1_sensitivity.png", dpi=300)
 ```json
 {
   "model_name": "...",
-  "math_formulation_path": "results/Q1_model.tex",
+  "math_formulation_path": "results/Q1_model.md",
   "code_path": "results/Q1_solve.py",
   "results_path": "results/Q1_x.npy",
   "figures": ["<only figures that support a named claim>"],

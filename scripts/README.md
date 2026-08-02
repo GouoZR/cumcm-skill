@@ -181,5 +181,5 @@ Critic schema 样本位于 `tests/fixtures/`：
 python scripts/score_artifact.py \
   --stage 1 \
   --critique tests/fixtures/test_critique_good.json \
-  --decision-log /tmp/mathmodel-test/state/decision_log.json
+  --decision-log /tmp/cumcm-test/state/decision_log.json
 ```

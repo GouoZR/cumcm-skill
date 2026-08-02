@@ -174,6 +174,22 @@ def run_checks(
         if missing_optional else None,
     ))
 
+    # 可选资产：archive/ 真题库（真题建模档案 + 优秀论文标答），缺失仅告警
+    archive_dir = comp_dir / "archive"
+    missing_archive = []
+    if not archive_dir.is_dir():
+        missing_archive.append("archive/")
+    elif not (archive_dir / "README.md").is_file():
+        missing_archive.append("archive/README.md")
+    checks.append(_optional(
+        "archive-assets",
+        not missing_archive,
+        f"{competition}: archive/ 真题库 present"
+        if not missing_archive else f"{competition} missing: {', '.join(missing_archive)}",
+        "Create competitions/cumcm/archive/ with README.md (真题建模档案 + 优秀论文标答)."
+        if missing_archive else None,
+    ))
+
     anti_path = comp_dir / "anti_patterns.md"
     if anti_path.is_file():
         anti_count = _anti_pattern_count(anti_path)

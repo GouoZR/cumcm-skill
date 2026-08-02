@@ -116,7 +116,7 @@ The `null` values above are schema placeholders only. Replace every one with an 
 - current official rules verified with no unresolved violation;
 - anti-pattern and consistency checks completed;
 - all high-severity panel findings resolved;
-- PDF compiled and visually inspected;
+- user-converted PDF/DOCX visually inspected (skill 交付 paper.md，渲染由用户完成);
 - AI disclosure and supporting materials complete when required;
 - `decision_log.stages.9.submission_ready == true`.
 
