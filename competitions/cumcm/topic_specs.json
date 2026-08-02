@@ -20,9 +20,9 @@
     "B": {
       "label": "B 题",
       "category": "本科组-理工",
-      "primary_type": "evaluation",
+      "primary_type": "decision",
       "task_type_key": "B_evaluation",
-      "typical_problems": ["评价指标体系", "AHP/熵权/TOPSIS", "组合赋权"],
+      "typical_problems": ["统计决策", "概率/抽样检验", "期望成本优化", "生产/管理决策"],
       "expected_subproblem_count": null
     },
     "C": {

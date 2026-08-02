@@ -369,6 +369,24 @@ cat 01_abstract.md \
     10_appendix.md > paper.md
 ```
 
+### 装配后一致性检查 (必做)
+
+装配完成后跑一次**图引用 ↔ figures 目录求差**，双向对齐。缺失任一侧都算不合格，需补齐或修正后重跑：
+
+```bash
+cd <project>/
+# 1. paper.md 引用了但 figures/ 里没有的图（引用失效）
+comm -23 <(grep -oE '\]\(figures/[^)]+\)' paper_workspace/paper.md | sed 's/^](//;s/)$//' | sort -u) \
+         <(ls figures/ | sort -u)
+# 2. figures/ 已生成但 paper.md 从未引用的图（漏引用）
+comm -13 <(grep -oE '\]\(figures/[^)]+\)' paper_workspace/paper.md | sed 's/^](//;s/)$//' | sort -u) \
+         <(ls figures/ | sort -u)
+```
+
+- 第 1 组非空 → 正文引用了不存在的图，回改对应章节或补图
+- 第 2 组非空 → 有图生成但论文没引用（走查中 Q1_kinematics.png 即此情形），在正文证据链处补引用，或删除未用图
+- 同时反向核对：每个 `![alt](figures/...)` 的标签、单位、标题、来源路径在正文可读（§4 交叉检查项）
+
 ### 交付物
 
 装配得到的 `paper.md` 即本 skill 的交付物。如需 DOCX/PDF，由用户自行转换（例如在 Word 中打开 `paper.md`，或使用自己熟悉的转换工具），并在转换后核对页数、分页、页眉页脚、公式与图表渲染是否符合当届官方要求。

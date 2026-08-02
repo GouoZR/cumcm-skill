@@ -67,6 +67,14 @@ class LedgerValidationError(ValueError):
     """The decision log does not contain a usable, explicit AI usage ledger."""
 
 
+#: AI 台账字段清单与模板路径提示。校验失败时附加到报错信息，指引补齐字段。
+LEDGER_TEMPLATE_HINT = (
+    "；字段清单与示例见 templates/shared/ai_usage_ledger.json"
+    "（每条需含 tool/model/version/purpose/use_stage/paper_sections/human_review，"
+    "query/output 须成对或提供 disclosure）"
+)
+
+
 class MissingDependency(RuntimeError):
     """An optional dependency required by the selected output is unavailable."""
 
@@ -109,6 +117,7 @@ def _require_nonempty_string(raw: Dict[str, Any], key: str, entry_no: int) -> st
     if not isinstance(value, str) or not value.strip():
         raise LedgerValidationError(
             f"compliance.ai_usage[{entry_no}] 的 {key!r} 必须是非空字符串"
+            f"{LEDGER_TEMPLATE_HINT}"
         )
     return value.strip()
 
@@ -120,6 +129,7 @@ def _optional_string(raw: Dict[str, Any], key: str, entry_no: int) -> str:
     if not isinstance(value, str):
         raise LedgerValidationError(
             f"compliance.ai_usage[{entry_no}] 的 {key!r} 必须是字符串"
+            f"{LEDGER_TEMPLATE_HINT}"
         )
     return value.strip()
 
@@ -144,10 +154,12 @@ def _string_list(
         expected = "非空字符串或字符串数组" if required else "字符串或字符串数组"
         raise LedgerValidationError(
             f"compliance.ai_usage[{entry_no}] 的 {key!r} 必须是{expected}"
+            f"{LEDGER_TEMPLATE_HINT}"
         )
     if required and not items:
         raise LedgerValidationError(
             f"compliance.ai_usage[{entry_no}] 的 {key!r} 不能为空"
+            f"{LEDGER_TEMPLATE_HINT}"
         )
     return tuple(items)
 
@@ -170,15 +182,18 @@ def validate_entries(raw_entries: Any) -> List[AIUsageEntry]:
         if bool(query) != bool(output):
             raise LedgerValidationError(
                 f"compliance.ai_usage[{index}] 的 'query' 与 'output' 必须同时填写"
+                f"{LEDGER_TEMPLATE_HINT}"
             )
         if disclosure and query:
             raise LedgerValidationError(
                 f"compliance.ai_usage[{index}] 不能同时填写 'query'/'output' 与 'disclosure'"
+                f"{LEDGER_TEMPLATE_HINT}"
             )
         if not disclosure and not (query and output):
             raise LedgerValidationError(
                 f"compliance.ai_usage[{index}] 必须填写完整 'query' + 'output'，"
                 "或为非对话式工具填写 'disclosure'"
+                f"{LEDGER_TEMPLATE_HINT}"
             )
 
         entries.append(
