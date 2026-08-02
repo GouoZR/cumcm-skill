@@ -179,7 +179,7 @@ my-modeling-project/
 SKILL.md                         # 工作流主入口与调度协议
 AGENTS.md                        # 仓库维护约定
 competitions/
-  cumcm/                         # 规则、59 份样本统计、写作启发、评分覆盖与模板骨架
+  cumcm/                         # 规则、59 份样本统计、写作启发、评分覆盖、真题标答库与模板骨架
 references/
   stage_00_* ... stage_09_*      # 按阶段加载的执行细则
   feedback_layer1_* ... layer4_* # 阶段评分、回检、Panel 与校准
