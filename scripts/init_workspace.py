@@ -79,6 +79,8 @@ def initialize(workspace: Path, competition: str = "cumcm") -> dict[str, object]
         TEMPLATE_ROOT / "capabilities.json": workspace / "state" / "capabilities.json",
         TEMPLATE_ROOT / "artifact_manifest.json": workspace / "state" / "artifact_manifest.json",
         TEMPLATE_ROOT / "run_manifest.json": workspace / "artifacts" / "run_manifest.json",
+        TEMPLATE_ROOT / "quality_contract.json": workspace / "artifacts" / "quality_contract.json",
+        TEMPLATE_ROOT / "result_registry.json": workspace / "results" / "result_registry.json",
         TEMPLATE_ROOT / "literature_library.json": workspace / "literature" / "library.json",
         TEMPLATE_ROOT / "literature_claim_map.json": workspace / "literature" / "claim_map.json",
     }
@@ -93,6 +95,7 @@ def initialize(workspace: Path, competition: str = "cumcm") -> dict[str, object]
             "run_id": run_id,
             "input_fingerprint": fingerprint,
         },
+        workspace / "results" / "result_registry.json": {"run_id": run_id},
     }
     for path, updates in stamped.items():
         payload = json.loads(path.read_text(encoding="utf-8"))

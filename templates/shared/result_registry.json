@@ -1,0 +1,47 @@
+{
+  "_schema_version": "1.0",
+  "run_id": "UNINITIALIZED",
+  "result_version": "",
+  "_contract": {
+    "purpose": "作为论文核心数字和结论的唯一结果索引，避免正文、表格、图片和多次运行之间发生人工抄写漂移。",
+    "role_values": [
+      "primary",
+      "baseline",
+      "validation",
+      "sensitivity",
+      "constraint",
+      "intermediate"
+    ],
+    "direction_values": [
+      "maximize",
+      "minimize",
+      "target",
+      "none"
+    ],
+    "required_metric_fields": [
+      "id",
+      "subproblem",
+      "role",
+      "name",
+      "value",
+      "unit",
+      "direction",
+      "scope",
+      "source",
+      "source_locator",
+      "method",
+      "seed",
+      "evidence"
+    ],
+    "notes": [
+      "每个子问题至少登记一个 role=primary 的核心结果。",
+      "value 可以是数字、字符串、布尔值或数组；不得为 null。",
+      "unit 无量纲时写 无量纲，不适用时写 不适用，不得留空。",
+      "scope 必须限定数据切分、时间区间、样本、方案、参数范围或聚合口径。",
+      "source 是工作区相对结果文件路径；source_locator 写 JSONPath、表名/单元格、行列或可复核定位说明。",
+      "seed 为 null 表示确定性结果；多种子汇总可写整数数组。",
+      "evidence 是支撑该结果的图、表、日志或独立复算文件路径数组。"
+    ]
+  },
+  "metrics": []
+}

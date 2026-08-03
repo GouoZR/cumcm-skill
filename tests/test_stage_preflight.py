@@ -92,6 +92,54 @@ def artifact(workspace: Path, relative: str, stage: int, owner: str, status: str
     }
 
 
+def quality_contract_fixture() -> dict[str, object]:
+    return {
+        "_schema_version": "1.0",
+        "subproblems": [{
+            "id": "q1",
+            "problem_type": "optimization",
+            "question_target": "求可行方案的最优目标值",
+            "analysis_unit": "候选方案",
+            "output_definition": "最优可行方案及目标值",
+            "metric_definition": "目标函数值",
+            "aggregation_scope": "对单个方案计算，不跨方案重复计数",
+            "constraints": ["满足题面资源约束"],
+            "invariants": [{
+                "id": "INV-Q1-01",
+                "statement": "输出方案必须满足全部约束",
+                "check": "读取结果并计算最大约束违反量",
+                "expected": "最大违反量等于 0",
+            }],
+            "baseline_or_oracle": "小规模枚举基线",
+            "fidelity_and_discretization": ["本例为离散小规模问题，无额外离散化"],
+            "claim_boundaries": ["结论仅适用于当前输入数据和约束"],
+        }],
+    }
+
+
+def result_registry_fixture(run_id: str) -> dict[str, object]:
+    return {
+        "_schema_version": "1.0",
+        "run_id": run_id,
+        "result_version": "test-v1",
+        "metrics": [{
+            "id": "Q1.primary_objective",
+            "subproblem": "q1",
+            "role": "primary",
+            "name": "最优目标值",
+            "value": 12.5,
+            "unit": "无量纲",
+            "direction": "maximize",
+            "scope": "当前测试输入和资源约束",
+            "source": "results/q1_result.csv",
+            "source_locator": "objective 列第 1 行",
+            "method": "测试求解器",
+            "seed": 20260803,
+            "evidence": ["figures/q1_result.png"],
+        }],
+    }
+
+
 def build_stage2_workspace(workspace: Path) -> dict[str, object]:
     """A minimal workspace that legitimately passes the Stage 2 preflight."""
     (workspace / "input").mkdir(parents=True, exist_ok=True)
@@ -110,11 +158,19 @@ def build_stage2_workspace(workspace: Path) -> dict[str, object]:
     (workspace / "results" / "q1_result.csv").write_text("objective\n12.5\n", encoding="utf-8")
     (workspace / "figures").mkdir(parents=True, exist_ok=True)
     (workspace / "figures" / "q1_result.png").write_bytes(PNG_BYTES)
+    write_json(workspace / "artifacts" / "quality_contract.json", quality_contract_fixture())
+    write_json(
+        workspace / "results" / "result_registry.json",
+        result_registry_fixture(str(result["run_id"])),
+    )
 
     manifest_path = workspace / "artifacts" / "run_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest.update(
         spec_checksum=sha256_of(workspace / "artifacts" / "model_spec.md"),
+        quality_contract_checksum=sha256_of(
+            workspace / "artifacts" / "quality_contract.json"
+        ),
         environment="python 3.12; numpy 2.1",
         subproblems=[{
             "id": "q1",
@@ -132,6 +188,8 @@ def build_stage2_workspace(workspace: Path) -> dict[str, object]:
         artifact(workspace, "code/q1_solve.py", 2, "claude", "verified"),
         artifact(workspace, "results/q1_result.csv", 2, "claude", "verified"),
         artifact(workspace, "figures/q1_result.png", 2, "claude", "verified"),
+        artifact(workspace, "artifacts/quality_contract.json", 1, "codex", "verified"),
+        artifact(workspace, "results/result_registry.json", 2, "claude", "verified"),
     ])
     return result
 
@@ -193,6 +251,125 @@ class Stage2PreflightTests(unittest.TestCase):
             self.assertFalse(report.ok)
             self.assertTrue(any("spec_checksum" in item for item in report.errors))
             self.assertTrue(any("subproblems" in item for item in report.errors))
+
+    def test_new_workspace_creates_quality_gate_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            (workspace / "input").mkdir()
+            (workspace / "input" / "problem.md").write_text("题面\n", encoding="utf-8")
+            result = init_workspace.initialize(workspace)
+            state = workflow.load_state(workspace)
+            registry = json.loads(
+                (workspace / "results" / "result_registry.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(state["quality_contract_version"], "1.0")
+            self.assertTrue((workspace / "artifacts" / "quality_contract.json").is_file())
+            self.assertEqual(registry["run_id"], result["run_id"])
+
+    def test_missing_quality_contract_fails_for_new_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            (workspace / "artifacts" / "quality_contract.json").unlink()
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("quality_contract.json" in item for item in report.errors))
+
+    def test_empty_quality_contract_subproblems_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            path = workspace / "artifacts" / "quality_contract.json"
+            write_json(path, {"_schema_version": "1.0", "subproblems": []})
+            manifest_path = workspace / "artifacts" / "run_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["quality_contract_checksum"] = sha256_of(path)
+            write_json(manifest_path, manifest)
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("subproblems 必须是非空数组" in item for item in report.errors))
+
+    def test_quality_contract_and_run_manifest_ids_must_match(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            path = workspace / "artifacts" / "quality_contract.json"
+            contract = json.loads(path.read_text(encoding="utf-8"))
+            contract["subproblems"][0]["id"] = "q2"
+            write_json(path, contract)
+            manifest_path = workspace / "artifacts" / "run_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["quality_contract_checksum"] = sha256_of(path)
+            write_json(manifest_path, manifest)
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("id 必须完全一致" in item for item in report.errors))
+
+    def test_result_registry_requires_primary_metric_per_question(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            path = workspace / "results" / "result_registry.json"
+            registry = json.loads(path.read_text(encoding="utf-8"))
+            registry["metrics"][0]["role"] = "validation"
+            write_json(path, registry)
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("至少需要一个 primary" in item for item in report.errors))
+
+    def test_result_registry_source_and_evidence_must_exist(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            path = workspace / "results" / "result_registry.json"
+            registry = json.loads(path.read_text(encoding="utf-8"))
+            registry["metrics"][0]["source"] = "results/missing.csv"
+            registry["metrics"][0]["evidence"] = ["figures/missing.png"]
+            write_json(path, registry)
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("missing.csv" in item for item in report.errors))
+            self.assertTrue(any("missing.png" in item for item in report.errors))
+
+    def test_stale_quality_contract_checksum_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            path = workspace / "artifacts" / "quality_contract.json"
+            contract = json.loads(path.read_text(encoding="utf-8"))
+            contract["subproblems"][0]["claim_boundaries"].append("新增边界")
+            write_json(path, contract)
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("quality_contract_checksum" in item for item in report.errors))
+
+    def test_legacy_workspace_without_feature_flag_remains_compatible(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            state_path = workspace / "state" / "workflow.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state.pop("quality_contract_version", None)
+            write_json(state_path, state)
+            (workspace / "artifacts" / "quality_contract.json").unlink()
+            (workspace / "results" / "result_registry.json").unlink()
+            manifest_path = workspace / "artifacts" / "run_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest.pop("quality_contract_checksum", None)
+            manifest.pop("result_registry", None)
+            write_json(manifest_path, manifest)
+            artifact_path = workspace / "state" / "artifact_manifest.json"
+            artifact_manifest = json.loads(artifact_path.read_text(encoding="utf-8"))
+            artifact_manifest["artifacts"] = [
+                entry for entry in artifact_manifest["artifacts"]
+                if entry["path"] not in {
+                    "artifacts/quality_contract.json",
+                    "results/result_registry.json",
+                }
+            ]
+            write_json(artifact_path, artifact_manifest)
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertTrue(report.ok, report.errors)
 
     def test_missing_run_manifest_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -705,6 +882,9 @@ class WorkflowPreflightWiringTests(unittest.TestCase):
                 run_id=state["run_id"],
                 input_fingerprint=state["input_fingerprint"],
                 spec_checksum=sha256_of(workspace / "artifacts" / "model_spec.md"),
+                quality_contract_checksum=sha256_of(
+                    workspace / "artifacts" / "quality_contract.json"
+                ),
                 environment="python 3.12",
                 subproblems=[{
                     "id": "q1",

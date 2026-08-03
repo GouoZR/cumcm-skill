@@ -63,7 +63,7 @@ python <skill>/scripts/validate_stage.py --workspace <cwd> --stage <2|4|6>
 
 主要失败条件与修法：
 
-- Stage 2：`artifacts/model_spec.md`、`implementation_contract.md`、`model_deviations.md` 缺失；`artifacts/run_manifest.json` 缺失或未填（`spec_checksum` 为空、`subproblems` 为空）；`run_id` / `input_fingerprint` 与 `workflow.json` 不一致；`spec_checksum` 与 `model_spec.md` 实际哈希不符（改了规格就重算）；子问题缺 `command`、`seed`、`code`、`results` 或 `figures`；声明的文件不存在或为空。
+- Stage 2：`artifacts/model_spec.md`、`implementation_contract.md`、`model_deviations.md` 缺失；新工作区的 `artifacts/quality_contract.json` 或 `results/result_registry.json` 缺失、未填、逐问 id 不一致、缺 primary 指标，或未登记到 artifact manifest；`artifacts/run_manifest.json` 缺失或未填（`spec_checksum` / `quality_contract_checksum` 为空、`subproblems` 为空）；`run_id` / `input_fingerprint` 与 `workflow.json` 不一致；规格或质量契约 checksum 与实际文件不符；子问题缺 `command`、`seed`、`code`、`results` 或 `figures`；声明的文件不存在或为空。
 - Stage 4：`paper_draft.md`、`support_materials_manifest.md` 或 `paper_workspace/*.md` 缺失；正文残留 `TODO` / `FIXME` / `TBD` 或模板占位符；图片相对路径解析不到文件；有标题但正文和子标题都空；正文引用编号在参考文献中没有对应条目；命中凭据模式；引用的图在 manifest 中是 `needs_revision` 或 `stale`。
 - Stage 6：`paper.md` 缺失或为空；`reviews/final_patch_plan.json` 不是 `verdict=passed, target_stage=6`；仍有 `pending` 条目；`blocker` / `high` 被写成 `accepted`；`accepted` 没写 `resolution_note`；`paper.md` 未以 `status=final` 登记到 `state/artifact_manifest.json`。
 
@@ -81,7 +81,7 @@ python <skill>/scripts/validate_stage.py --workspace <cwd> --stage <2|4|6>
 
 发生回退时，不直接删除历史产物；将受影响产物标为 `stale` 或 `needs_revision`，新版本使用新文件或更新 manifest。`needs_revision` 和 `stale` 的产物不得作为正式交付件：论文引用了这类图会在 Stage 4 预检失败，`paper.md` 必须在 Stage 6 完成前登记为 `final`。
 
-`artifacts/run_manifest.json` 记录本轮求解的可复现信息：`run_id`、`input_fingerprint`、`spec_checksum`（`model_spec.md` 的哈希）、`environment`，以及每个子问题的 `id`、`command`、`seed`、`code`、`results`、`figures`。模板初始化后是空壳，Stage 2 预检会因此拒绝流转，必须真实填写。`seed` 为 `null` 表示该子问题确定性求解。
+`artifacts/run_manifest.json` 记录本轮求解的可复现信息：`run_id`、`input_fingerprint`、`spec_checksum`（`model_spec.md` 的哈希）、`quality_contract_checksum`、`result_registry`、`environment`，以及每个子问题的 `id`、`command`、`seed`、`code`、`results`、`figures`。模板初始化后是空壳，Stage 2 预检会因此拒绝流转，必须真实填写。`seed` 为 `null` 表示该子问题确定性求解。启用 `quality_contract_version=1.0` 的新工作区要求质量契约、运行清单和结果注册表的逐问 id 完全一致，且每问至少有一个 primary 指标；旧 v2.0 工作区不强制新增文件。
 
 ## SubAgent 报告
 

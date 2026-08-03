@@ -3,8 +3,10 @@
   "run_id": "UNINITIALIZED",
   "input_fingerprint": null,
   "spec_checksum": null,
+  "quality_contract_checksum": null,
   "environment": "",
   "model_deviations": "artifacts/model_deviations.md",
+  "result_registry": "results/result_registry.json",
   "_contract": {
     "spec_checksum": "sha256 of artifacts/model_spec.md at the time the results were produced",
     "environment": "interpreter and key dependency versions, e.g. 'python 3.12.3; numpy 2.1.0; scipy 1.14.0'",
@@ -20,8 +22,11 @@
     "notes": [
       "每个子问题至少一个 code、一个 results、一个 figures 条目，全部为工作区相对路径。",
       "seed 为 null 表示该子问题确定性求解，不使用随机数。",
-      "Stage 2 预检会校验 run_id、input_fingerprint、spec_checksum 与声明文件是否存在。"
-    ]
+      "Stage 2 预检会校验 run_id、input_fingerprint、spec_checksum 与声明文件是否存在。",
+      "启用 quality_contract_version=1.0 的工作区还会校验质量契约哈希、逐问 id 对齐和每问至少一个 primary 指标。"
+    ],
+    "quality_contract_checksum": "sha256 of artifacts/quality_contract.json at the time the results were produced",
+    "result_registry": "workspace-relative path to the machine-readable headline result registry"
   },
   "subproblems": []
 }

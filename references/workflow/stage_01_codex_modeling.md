@@ -8,6 +8,7 @@ inputs:
   - active handoff
 outputs:
   - artifacts/model_spec.md
+  - artifacts/quality_contract.json
   - artifacts/implementation_contract.md
   - literature/query_plan.json
   - reviews/subagents/stage_01/*.md
@@ -25,17 +26,22 @@ outputs:
 2. 按 `references/runtime/codex_subagents.md` 动态启用 2–4 个互补角色，重点审查模型备选、假设/约束/可辨识性、实现可行性和文献证据需求；SubAgent 不可用时做对应的串行独立复核。
 3. 检查题意遗漏、变量定义、量纲、约束、数据泄漏、不可辨识性和目标冲突。
 4. 对每个关键子问题比较少量候选模型，说明选择理由、适用前提和弃选方案；优先最简单且能回答题目的模型。
-5. 按 `templates/shared/model_spec.md` 固化假设、符号、核心公式、求解流程、基线、评价指标、敏感性与边界测试。
-6. 按 `templates/shared/implementation_contract.md` 写实现契约：输入输出、模块、随机种子、参数、测试、结果表、证据图和复现要求。
-7. 写文献查询计划，只定义需要什么证据；可用时检索，不可用时不阻断建模。
-8. 主 Agent 核验并整合 SubAgent 发现，在 handoff 的“SubAgent 审查轨迹”中记录采用报告、驳回发现与理由或串行降级，再交给 Claude Stage 2。
+5. 读取 `references/audit/competition_quality_gates.md`，按实际题型选择最低验证集，不机械套用无关检查。
+6. 按 `templates/shared/model_spec.md` 固化假设、符号、核心公式、求解流程、基线、评价指标、敏感性与边界测试。
+7. 填写 `artifacts/quality_contract.json`：逐问固定分析单位、输出和指标定义、聚合/去重/归一化口径、约束、不变量、独立基线或 oracle、保真度/离散化检查和结论作用域。每问至少一条可执行不变量；确实不适用的字段写明理由，不得留空。
+8. 按 `templates/shared/implementation_contract.md` 写实现契约：输入输出、模块、随机种子、参数、测试、结果表、证据图、结果注册表和复现要求。
+9. 写文献查询计划，只定义需要什么证据；可用时检索，不可用时不阻断建模。
+10. 主 Agent 核验并整合 SubAgent 发现，在 handoff 的“SubAgent 审查轨迹”中记录采用报告、驳回发现与理由或串行降级，再交给 Claude Stage 2。
 
 ## 国奖级建模门
 
 - 每一问都有“目标—输入—模型—输出—指标—验证”闭环；
 - 关键选择有基线或可比较备选，假设有验证方式或失效边界；
 - 公式、符号、量纲、约束、数据口径和代码接口一致；
-- 每个主要结论预先绑定结果表/图与稳健性证据；
+- 每问明确计量对象、指标作用域和聚合顺序；重复计数、归一化、多目标权衡和上下游误差传播不含糊；
+- 每问至少有一条针对主要失效风险的不变量或反例，以及正式模型之外的基线、oracle 或独立证据；
+- 采样、网格、步长、代表点、线性化、聚类或代理模型均有保真度/收敛检查计划；
+- 每个主要结论预先绑定结果表/图与稳健性证据，并限定允许表述的作用域；
 - 模型规格足以让实现者不依赖聊天上下文编码；
 - 不以复杂度和算法堆叠代替题意适配与合理性。
 

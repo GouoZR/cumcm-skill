@@ -20,6 +20,30 @@ from urllib.parse import unquote, urlsplit
 RUN_MANIFEST_SCHEMA = "1.0"
 ARTIFACT_MANIFEST_SCHEMA = "1.0"
 PATCH_PLAN_SCHEMA = "1.0"
+QUALITY_CONTRACT_SCHEMA = "1.0"
+RESULT_REGISTRY_SCHEMA = "1.0"
+QUALITY_CONTRACT_FEATURE = "1.0"
+
+QUALITY_PROBLEM_TYPES = {
+    "data_processing",
+    "prediction",
+    "classification",
+    "evaluation",
+    "optimization",
+    "simulation",
+    "mechanism",
+    "decision",
+    "other",
+}
+RESULT_ROLES = {
+    "primary",
+    "baseline",
+    "validation",
+    "sensitivity",
+    "constraint",
+    "intermediate",
+}
+RESULT_DIRECTIONS = {"maximize", "minimize", "target", "none"}
 
 ARTIFACT_STAGES = set(range(7))
 ARTIFACT_OWNERS = {"claude", "codex"}
@@ -361,6 +385,32 @@ def validate_run_manifest(
                 "spec_checksum 与 artifacts/model_spec.md 当前内容不一致；"
                 "规格已变化时必须重新运行并更新清单"
             )
+    if quality_contract_enabled(state):
+        quality_checksum = data.get("quality_contract_checksum")
+        if not isinstance(quality_checksum, str) or not SHA256_PATTERN.fullmatch(quality_checksum):
+            report.error(
+                "run_manifest.json 的 quality_contract_checksum 必须是 sha256:<64 位十六进制>"
+            )
+        else:
+            quality_path = workspace / "artifacts" / "quality_contract.json"
+            if quality_path.is_file() and sha256_file(quality_path) != quality_checksum:
+                report.error(
+                    "quality_contract_checksum 与 artifacts/quality_contract.json 当前内容不一致；"
+                    "质量契约变化后必须重新运行并更新清单"
+                )
+        result_registry = data.get("result_registry")
+        if result_registry != "results/result_registry.json":
+            report.error(
+                "run_manifest.json 的 result_registry 必须指向 results/result_registry.json"
+            )
+        else:
+            check_declared_path(
+                report,
+                workspace,
+                result_registry,
+                "run_manifest.result_registry",
+            )
+
     if not isinstance(data.get("environment"), str) or not data["environment"].strip():
         report.error("run_manifest.json 必须记录 environment（解释器与关键依赖版本）")
     declared.update(validate_run_manifest_subproblems(report, workspace, data.get("subproblems")))
@@ -532,6 +582,285 @@ def validate_stage_2_registry(
             )
 
 
+
+def quality_contract_enabled(state: dict[str, object] | None) -> bool:
+    """Only new workspaces opt into the v2.1 hard gates; legacy v2.0 workspaces remain usable."""
+    return bool(state and state.get("quality_contract_version") == QUALITY_CONTRACT_FEATURE)
+
+
+def nonempty_string(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def validate_string_list(
+    report: Report,
+    value: object,
+    context: str,
+    *,
+    allow_empty: bool = False,
+) -> None:
+    if not isinstance(value, list) or (not value and not allow_empty):
+        suffix = "数组" if allow_empty else "非空数组"
+        report.error(f"{context} 必须是{suffix}")
+        return
+    for index, item in enumerate(value):
+        if not nonempty_string(item):
+            report.error(f"{context}[{index}] 必须是非空字符串")
+
+
+def validate_quality_contract(report: Report, workspace: Path) -> set[str]:
+    path = workspace / "artifacts" / "quality_contract.json"
+    identifiers: set[str] = set()
+    if not path.is_file():
+        report.error(
+            "缺少 artifacts/quality_contract.json；Stage 1 必须固定逐问语义、验证义务和结论边界"
+        )
+        return identifiers
+    data, error = load_json(path)
+    if error:
+        report.error(error)
+        return identifiers
+    if not isinstance(data, dict):
+        report.error("quality_contract.json 顶层必须是对象")
+        return identifiers
+    if data.get("_schema_version") != QUALITY_CONTRACT_SCHEMA:
+        report.error(
+            f"quality_contract.json 的 _schema_version 必须是 {QUALITY_CONTRACT_SCHEMA}"
+        )
+    subproblems = data.get("subproblems")
+    if not isinstance(subproblems, list) or not subproblems:
+        report.error("quality_contract.json 的 subproblems 必须是非空数组")
+        return identifiers
+    required = (
+        "id",
+        "problem_type",
+        "question_target",
+        "analysis_unit",
+        "output_definition",
+        "metric_definition",
+        "aggregation_scope",
+        "constraints",
+        "invariants",
+        "baseline_or_oracle",
+        "fidelity_and_discretization",
+        "claim_boundaries",
+    )
+    for index, entry in enumerate(subproblems):
+        context = f"quality_contract.subproblems[{index}]"
+        if not isinstance(entry, dict):
+            report.error(f"{context} 必须是对象")
+            continue
+        missing = [field for field in required if field not in entry]
+        if missing:
+            report.error(f"{context} 缺少字段: {', '.join(missing)}")
+        identifier = entry.get("id")
+        if not nonempty_string(identifier):
+            report.error(f"{context} 缺少非空 id")
+            label = context
+        else:
+            assert isinstance(identifier, str)
+            label = identifier
+            if identifier in identifiers:
+                report.error(f"quality_contract 子问题 id 重复: {identifier}")
+            identifiers.add(identifier)
+        problem_type = entry.get("problem_type")
+        if problem_type not in QUALITY_PROBLEM_TYPES:
+            report.error(
+                f"{label} 的 problem_type 必须属于 {', '.join(sorted(QUALITY_PROBLEM_TYPES))}"
+            )
+        for field in (
+            "question_target",
+            "analysis_unit",
+            "output_definition",
+            "metric_definition",
+            "aggregation_scope",
+            "baseline_or_oracle",
+        ):
+            if not nonempty_string(entry.get(field)):
+                report.error(f"{label} 的 {field} 必须是非空字符串")
+        for field in ("constraints", "fidelity_and_discretization", "claim_boundaries"):
+            validate_string_list(report, entry.get(field), f"{label} 的 {field}")
+        invariants = entry.get("invariants")
+        if not isinstance(invariants, list) or not invariants:
+            report.error(f"{label} 的 invariants 必须是非空数组")
+            continue
+        invariant_ids: set[str] = set()
+        for inv_index, invariant in enumerate(invariants):
+            inv_context = f"{label}.invariants[{inv_index}]"
+            if not isinstance(invariant, dict):
+                report.error(f"{inv_context} 必须是对象")
+                continue
+            for field in ("id", "statement", "check", "expected"):
+                if not nonempty_string(invariant.get(field)):
+                    report.error(f"{inv_context}.{field} 必须是非空字符串")
+            inv_id = invariant.get("id")
+            if nonempty_string(inv_id):
+                assert isinstance(inv_id, str)
+                if inv_id in invariant_ids:
+                    report.error(f"{label} 的不变量 id 重复: {inv_id}")
+                invariant_ids.add(inv_id)
+    return identifiers
+
+
+def validate_result_registry(
+    report: Report,
+    workspace: Path,
+    state: dict[str, object] | None,
+    expected_subproblems: set[str] | None = None,
+) -> set[Path]:
+    path = workspace / "results" / "result_registry.json"
+    declared: set[Path] = set()
+    if not path.is_file():
+        report.error(
+            "缺少 results/result_registry.json；核心数字必须有唯一、可定位的结果索引"
+        )
+        return declared
+    data, error = load_json(path)
+    if error:
+        report.error(error)
+        return declared
+    if not isinstance(data, dict):
+        report.error("result_registry.json 顶层必须是对象")
+        return declared
+    if data.get("_schema_version") != RESULT_REGISTRY_SCHEMA:
+        report.error(
+            f"result_registry.json 的 _schema_version 必须是 {RESULT_REGISTRY_SCHEMA}"
+        )
+    run_id = data.get("run_id")
+    if not isinstance(run_id, str) or not RUN_ID_PATTERN.fullmatch(run_id):
+        report.error("result_registry.json 缺少合法 run_id")
+    elif state is not None and state.get("run_id") not in (None, run_id):
+        report.error("result_registry.json 的 run_id 与 workflow.json 不一致")
+    if not nonempty_string(data.get("result_version")):
+        report.error("result_registry.json 必须记录非空 result_version")
+    metrics = data.get("metrics")
+    if not isinstance(metrics, list) or not metrics:
+        report.error("result_registry.json 的 metrics 必须是非空数组")
+        return declared
+    required = (
+        "id",
+        "subproblem",
+        "role",
+        "name",
+        "value",
+        "unit",
+        "direction",
+        "scope",
+        "source",
+        "source_locator",
+        "method",
+        "seed",
+        "evidence",
+    )
+    metric_ids: set[str] = set()
+    primary_by_subproblem: set[str] = set()
+    for index, entry in enumerate(metrics):
+        context = f"result_registry.metrics[{index}]"
+        if not isinstance(entry, dict):
+            report.error(f"{context} 必须是对象")
+            continue
+        missing = [field for field in required if field not in entry]
+        if missing:
+            report.error(f"{context} 缺少字段: {', '.join(missing)}")
+        identifier = entry.get("id")
+        if not nonempty_string(identifier):
+            report.error(f"{context} 缺少非空 id")
+            label = context
+        else:
+            assert isinstance(identifier, str)
+            label = identifier
+            if identifier in metric_ids:
+                report.error(f"result_registry 指标 id 重复: {identifier}")
+            metric_ids.add(identifier)
+        subproblem = entry.get("subproblem")
+        if not nonempty_string(subproblem):
+            report.error(f"{label} 的 subproblem 必须是非空字符串")
+        elif expected_subproblems is not None and subproblem not in expected_subproblems:
+            report.error(f"{label} 引用了 quality_contract 中不存在的子问题: {subproblem}")
+        role = entry.get("role")
+        if role not in RESULT_ROLES:
+            report.error(f"{label} 的 role 必须属于 {', '.join(sorted(RESULT_ROLES))}")
+        elif role == "primary" and isinstance(subproblem, str):
+            primary_by_subproblem.add(subproblem)
+        direction = entry.get("direction")
+        if direction not in RESULT_DIRECTIONS:
+            report.error(
+                f"{label} 的 direction 必须属于 {', '.join(sorted(RESULT_DIRECTIONS))}"
+            )
+        if entry.get("value") is None:
+            report.error(f"{label} 的 value 不得为 null")
+        for field in ("name", "unit", "scope", "source_locator", "method"):
+            if not nonempty_string(entry.get(field)):
+                report.error(f"{label} 的 {field} 必须是非空字符串")
+        source = check_declared_path(report, workspace, entry.get("source"), f"{label} 的 source")
+        if source is not None:
+            declared.add(source)
+        evidence = entry.get("evidence")
+        if not isinstance(evidence, list) or not evidence:
+            report.error(f"{label} 的 evidence 必须是非空数组")
+        else:
+            for evidence_index, raw in enumerate(evidence):
+                resolved = check_declared_path(
+                    report,
+                    workspace,
+                    raw,
+                    f"{label} 的 evidence[{evidence_index}]",
+                )
+                if resolved is not None:
+                    declared.add(resolved)
+        seed = entry.get("seed")
+        valid_seed = seed is None or (
+            isinstance(seed, int) and not isinstance(seed, bool)
+        ) or (
+            isinstance(seed, list)
+            and bool(seed)
+            and all(isinstance(item, int) and not isinstance(item, bool) for item in seed)
+        )
+        if not valid_seed:
+            report.error(f"{label} 的 seed 必须是 null、整数或非空整数数组")
+    if expected_subproblems is not None:
+        missing_primary = sorted(expected_subproblems - primary_by_subproblem)
+        if missing_primary:
+            report.error(
+                "result_registry 每个子问题至少需要一个 primary 指标；缺少: "
+                + ", ".join(missing_primary)
+            )
+    return declared
+
+
+def run_manifest_subproblem_ids(workspace: Path) -> set[str]:
+    data, _ = load_json(workspace / "artifacts" / "run_manifest.json")
+    if not isinstance(data, dict) or not isinstance(data.get("subproblems"), list):
+        return set()
+    return {
+        entry["id"]
+        for entry in data["subproblems"]
+        if isinstance(entry, dict) and nonempty_string(entry.get("id"))
+    }
+
+
+def validate_quality_artifact_registry(
+    report: Report,
+    workspace: Path,
+    registry: dict[Path, dict[str, object]],
+) -> None:
+    expected = (
+        ("artifacts/quality_contract.json", 1, "codex"),
+        ("results/result_registry.json", 2, "claude"),
+    )
+    for relative, stage, owner in expected:
+        path = (workspace / relative).resolve()
+        entry = registry.get(path)
+        if entry is None:
+            report.error(f"质量门产物未登记到 artifact manifest: {relative}")
+            continue
+        if entry.get("stage") != stage:
+            report.error(f"{relative} 在 artifact manifest 中 stage 必须是 {stage}")
+        if entry.get("owner") != owner:
+            report.error(f"{relative} 在 artifact manifest 中 owner 必须是 {owner}")
+        if entry.get("status") in UNUSABLE_STATUSES:
+            report.error(f"{relative} 状态为 {entry.get('status')}，不得继续流转")
+
 def validate_patch_plan(report: Report, workspace: Path) -> None:
     path = workspace / "reviews" / "final_patch_plan.json"
     if not path.is_file():
@@ -642,25 +971,47 @@ def flag_unusable_figures(
 def validate_stage_2(workspace: Path) -> Report:
     report = Report()
     state = read_state(workspace)
-    require_files(
-        report,
-        workspace,
-        (
-            "artifacts/model_spec.md",
-            "artifacts/implementation_contract.md",
-            "artifacts/model_deviations.md",
-        ),
-    )
+    required = [
+        "artifacts/model_spec.md",
+        "artifacts/implementation_contract.md",
+        "artifacts/model_deviations.md",
+    ]
+    if quality_contract_enabled(state):
+        required.extend((
+            "artifacts/quality_contract.json",
+            "results/result_registry.json",
+        ))
+    require_files(report, workspace, tuple(required))
+    quality_ids: set[str] | None = None
+    if quality_contract_enabled(state):
+        quality_ids = validate_quality_contract(report, workspace)
     declared = validate_run_manifest(report, workspace, state)
+    if quality_contract_enabled(state):
+        result_declared = validate_result_registry(report, workspace, state, quality_ids)
+        declared.update(result_declared)
+        manifest_ids = run_manifest_subproblem_ids(workspace)
+        if quality_ids is not None and manifest_ids != quality_ids:
+            report.error(
+                "quality_contract 与 run_manifest 的子问题 id 必须完全一致；"
+                f"quality={sorted(quality_ids)}, run_manifest={sorted(manifest_ids)}"
+            )
     registry = validate_artifact_manifest(report, workspace, state)
     validate_stage_2_registry(report, workspace, declared, registry)
+    if quality_contract_enabled(state):
+        validate_quality_artifact_registry(report, workspace, registry)
     return report
 
 
 def validate_stage_4(workspace: Path) -> Report:
     report = Report()
     state = read_state(workspace)
-    require_files(report, workspace, ("paper_draft.md", "support_materials_manifest.md"))
+    required = ["paper_draft.md", "support_materials_manifest.md"]
+    if quality_contract_enabled(state):
+        required.append("results/result_registry.json")
+    require_files(report, workspace, tuple(required))
+    if quality_contract_enabled(state):
+        quality_ids = validate_quality_contract(report, workspace)
+        validate_result_registry(report, workspace, state, quality_ids)
     sections = sorted((workspace / "paper_workspace").glob("*.md"))
     if not sections:
         report.error("paper_workspace/ 中没有章节文件；Stage 4 必须留下可追溯的分章产物")
@@ -695,7 +1046,13 @@ def validate_stage_4(workspace: Path) -> Report:
 def validate_stage_6(workspace: Path) -> Report:
     report = Report()
     state = read_state(workspace)
-    require_files(report, workspace, ("paper.md",))
+    required = ["paper.md"]
+    if quality_contract_enabled(state):
+        required.append("results/result_registry.json")
+    require_files(report, workspace, tuple(required))
+    if quality_contract_enabled(state):
+        quality_ids = validate_quality_contract(report, workspace)
+        validate_result_registry(report, workspace, state, quality_ids)
     validate_patch_plan(report, workspace)
     registry = validate_artifact_manifest(report, workspace, state)
 

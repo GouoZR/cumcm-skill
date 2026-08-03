@@ -12,5 +12,6 @@
   "active_handoff": null,
   "blocking_issues": [],
   "completed_stages": [],
-  "updated_at": null
+  "updated_at": null,
+  "quality_contract_version": "1.0"
 }

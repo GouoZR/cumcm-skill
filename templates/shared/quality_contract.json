@@ -1,0 +1,47 @@
+{
+  "_schema_version": "1.0",
+  "_contract": {
+    "purpose": "在实现前固定每个子问题的数学语义、验证义务与结论边界，适用于预测、分类、评价、优化、仿真、机理和综合决策题。",
+    "problem_type_values": [
+      "data_processing",
+      "prediction",
+      "classification",
+      "evaluation",
+      "optimization",
+      "simulation",
+      "mechanism",
+      "decision",
+      "other"
+    ],
+    "required_subproblem_fields": [
+      "id",
+      "problem_type",
+      "question_target",
+      "analysis_unit",
+      "output_definition",
+      "metric_definition",
+      "aggregation_scope",
+      "constraints",
+      "invariants",
+      "baseline_or_oracle",
+      "fidelity_and_discretization",
+      "claim_boundaries"
+    ],
+    "invariant_required_fields": [
+      "id",
+      "statement",
+      "check",
+      "expected"
+    ],
+    "notes": [
+      "每个题面子问题恰好登记一条，id 必须与 run_manifest.subproblems[].id 一致。",
+      "aggregation_scope 必须说明对象、时间、空间、分组、去重、归一化或加权口径；确实不适用时写明原因。",
+      "constraints 至少登记一条题面约束、数据边界或明确的无额外约束说明。",
+      "invariants 至少登记一条可执行的性质测试、反例检查、守恒关系、单调关系或人工可核验算例。",
+      "baseline_or_oracle 可以是朴素基线、小规模精确解、替代求解器、文献量级、留出集或人工复算，但不得只写正式模型自身。",
+      "fidelity_and_discretization 至少说明采样、网格、步长、近似或模型保真度；不适用时写明原因。",
+      "claim_boundaries 必须限定数据范围、时间范围、扰动范围、适用对象或不能推出的结论。"
+    ]
+  },
+  "subproblems": []
+}

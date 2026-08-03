@@ -5,6 +5,7 @@ name: delivery
 inputs:
   - paper_draft.md
   - reviews/final_patch_plan.json
+  - results/result_registry.json
   - verified artifacts
 outputs:
   - paper.md
@@ -21,7 +22,7 @@ outputs:
 ## 执行
 
 1. 先按 `_patch_item_contract` 检查 `reviews/final_patch_plan.json` 的字段、`verdict` 和 `target_stage`，再逐项应用并更新 `status`；`accepted` 必须同时写 `resolution_note`。字段缺失时退回 Codex，不得猜测，也不得借机更换模型或新增未验证结果。
-2. 检查标题层级、公式、表格、图片相对路径、参考文献、术语、符号和交叉引用。
+2. 检查标题层级、公式、表格、图片相对路径、参考文献、术语、符号和交叉引用；逐项确认摘要、正文、表格和结论中的核心数字能在 `results/result_registry.json` 通过 `source_locator` 定位。
 3. 生成 `paper.md`；可额外生成 `submission_checklist.md` 与 `support_materials_manifest.md`。
 4. 确认 `paper.md` 存在后调用 `workflow.py complete`。
 
@@ -33,7 +34,7 @@ outputs:
 - 全文无占位符、`TODO`、`<...>` 模板残留、伪造引用、未验证数字或凭据；
 - 公式编号、图号、表号、符号和交叉引用全文连续一致，图片相对路径可解析；
 - 正文引用与参考文献一一对应，中文来源保留中文原名；
-- `paper.md` 的数字与 `results/` 一致，未在装配阶段引入新结论或新结果。
+- `paper.md` 的核心数字与 `results/result_registry.json` 及其来源文件一致，未在装配阶段引入新结论或新结果。
 
 任一项不满足时先修复；字段缺失或修改单本身有问题则退回 Codex，不得猜测。
 

@@ -4,6 +4,7 @@ owner: claude
 name: implementation
 inputs:
   - artifacts/model_spec.md
+  - artifacts/quality_contract.json
   - artifacts/implementation_contract.md
   - input/
 outputs:
@@ -12,6 +13,7 @@ outputs:
   - figures/
   - artifacts/run_manifest.json
   - artifacts/model_deviations.md
+  - results/result_registry.json
 ---
 
 # Stage 2 — 数据处理、实现与求解
@@ -24,16 +26,20 @@ outputs:
 
 1. 主 Agent 先固定公共数据清洗模块、随机种子策略和 `references/visualization/plot_style.py` 绘图样式，作为各子问题共用基座。
 2. 按 `references/runtime/claude_subagents.md` 动态启用 2–4 个按子问题分区的 SubAgent，各自负责一问的实现、求解、结果表与证据图；SubAgent 不可用时按同样分区串行完成。可从 `templates/shared/code_starter/` 对应骨架起步，不从零重写通用流程。
-3. 先完成最小基线，再实现正式模型；对关键中间量做断言、量纲检查和极端输入测试。
-4. 每个子问题至少配三类证据图之一（直接结果图、验证/敏感性图；机制可解释时补机理/流程图），不止堆公式或代码过程；用 `references/visualization/figure_audit.py` 做图表体检。
-5. 主 Agent 核验各子问题产出（见 `claude_subagents.md`「主 Agent 核验」），核验通过后统一登记到 artifact manifest，并保存 `artifacts/run_manifest.json`。
-6. 若规格无法实现或需调整模型，必须写 `artifacts/model_deviations.md`；不得静默更换目标函数、约束、指标或数据口径。
-7. 自检通过后交给 Codex Stage 3；若 Stage 3 退回，则按修改单完成 Stage 2R，只修复修改单指出的问题，不重开未受影响的子问题。
+3. 先完成最小基线，再实现正式模型；逐条执行 `quality_contract.json` 中的不变量、反例、约束、保真度和离散化检查。正式求解器与审计评估器尽量分离，独立复算不得只是再次调用正式模型的总目标函数。
+4. 按题型输出必要诊断：预测/分类给出数据切分与分组误差，评价给出权重/归一化和排序稳定性，优化给出目标分解与约束违反量，仿真给出步长/网格/重复试验，空间网络题给出尺度与边界检查。
+5. 将每问至少一个核心结果登记到 `results/result_registry.json`，写明值、单位、作用域、source locator、方法、seed 和证据文件；正文候选数字不得来自未登记的临时输出。
+6. 每个子问题至少配三类证据图之一（直接结果图、验证/敏感性图；机制可解释时补机理/流程图），不止堆公式或代码过程；用 `references/visualization/figure_audit.py` 做图表体检。
+7. 主 Agent 核验各子问题产出（见 `claude_subagents.md`「主 Agent 核验」），核验通过后统一登记到 artifact manifest，并保存 `artifacts/run_manifest.json`；其中必须记录 `quality_contract_checksum` 和 `result_registry`。
+8. 若规格无法实现或需调整模型，必须写 `artifacts/model_deviations.md`，同步更新质量契约、哈希和受影响结果后重跑；不得静默更换目标函数、约束、指标、聚合口径、数据范围或离散化方法。
+9. 自检通过后交给 Codex Stage 3；若 Stage 3 退回，则按修改单完成 Stage 2R，只修复修改单指出的问题，不重开未受影响的子问题。
 
 ## 国奖级实现门
 
 - 每个子问题的结果可从原始输入独立复现，且至少有一个决定性输出被主 Agent 亲自复跑或复算；
+- `quality_contract.json` 与 run manifest 逐问 id 一致，每条不变量和最低验证项有测试、日志、图表或人工复核证据；
 - 关键中间量做过断言、量纲检查和极端输入测试，失败未被隐藏；
+- 每问至少一个 primary 指标已登记到结果注册表，且可定位到真实结果文件；
 - 每个子问题至少有直接结果证据图，风险较高的结论补验证/敏感性证据，机制类结论补机理/流程图；
 - 图表数字与结果表一致，跨子问题的公共变量口径统一；
 - 模型偏离已显式记录并说明影响范围；

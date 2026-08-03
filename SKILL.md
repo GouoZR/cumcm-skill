@@ -3,7 +3,7 @@ name: cumcm-skill
 description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双 Agent 接力工作流。Use when the user explicitly works on CUMCM/国赛 and wants problem intake, mathematical modeling, implementation, result auditing, Markdown paper writing, literature evidence checking, or final review. Coordinates seven file-based stages through a shared workspace: Claude Code handles intake, implementation, writing, and delivery; Codex handles model design and audits. Produces paper.md only. Do not trigger for generic data analysis, ordinary academic writing, or non-CUMCM tasks."
 ---
 
-# cumcm-skill v2.0
+# cumcm-skill v2.1
 
 把 CUMCM 项目组织为 **Claude Code 与 Codex 共用同一 Skill、依靠共享文件轮流接力**的 7 阶段流程。聊天记录不是接口；`state/workflow.json`、阶段产物和 handoff 才是接口。
 
@@ -16,7 +16,9 @@ description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双
 5. **职责分离**：Claude偏实践与写作，Codex偏建模推理与审计。任何模型偏离必须显式记录。
 6. **外部能力可选**：Sciverse 文献检索和 PackyAPI 生图不可用时，不阻断无关建模阶段。
 7. **唯一论文交付**：最终交付 `paper.md`；Word/WPS 排版、PDF 转换和当届格式核验由用户完成。
-8. **高质量而非奖项承诺**：按可复现、逐问闭环和强证据链的国奖级目标执行，但不保证奖项，不把历史模式当官方阈值。
+8. **语义与证据先于算法**：逐问先固定分析单位、指标口径、聚合/去重规则、约束、不变量、基线、保真度和结论边界，再实现算法；不得用复杂算法名替代数学正确性。
+9. **核心数字单一索引**：论文核心数字必须登记到 `results/result_registry.json`，携带单位、作用域、seed、来源定位和证据文件，不靠人工跨文件抄写。
+10. **高质量而非奖项承诺**：按可复现、逐问闭环和强证据链的国奖级目标执行，但不保证奖项，不把历史模式当官方阈值。
 
 ## 宿主适配
 
@@ -41,13 +43,13 @@ description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双
 6. 完成本阶段产物、验证、artifact manifest 和 handoff；校验交接单后调用 `workflow.py handoff`。
 7. revision 冲突时停止写入，重新读取状态；不得覆盖另一 Agent 的修改。
 
-Stage 2、4、6 有程序化预检，由 `workflow.py` 在前进流转时强制执行，无法绕过：
+Stage 2、4、6 有程序化预检，由 `workflow.py` 在前进流转时强制执行，无法绕过。v2.1 新建工作区通过 `quality_contract_version=1.0` 启用质量契约和结果注册表硬门；旧 v2.0 工作区保持兼容：
 
 ```text
 python <skill>/scripts/validate_stage.py --workspace <cwd> --stage <2|4|6>
 ```
 
-预检不通过时 `handoff`（Stage 2→3、4→5）和 `complete`（Stage 6）直接失败且不修改 `workflow.json`；修好报出的 `errors` 后重试。Stage 3→2、5→4 的退回不跑被退回阶段的完成预检。预检只做机械检查：文件是否存在、schema 是否合法、校验和是否一致、路径能否解析、有无残留占位符或凭据。数学正确性、模型合理性和创新性不在其中，仍由 Codex Stage 3/5 审查。
+预检不通过时 `handoff`（Stage 2→3、4→5）和 `complete`（Stage 6）直接失败且不修改 `workflow.json`；修好报出的 `errors` 后重试。Stage 3→2、5→4 的退回不跑被退回阶段的完成预检。预检只做机械检查：文件是否存在、schema 是否合法、校验和是否一致、逐问 id 是否对齐、每问是否存在 primary 指标、路径能否解析、有无残留占位符或凭据。程序只能确认质量契约已经填写和证据可定位，不能替代 Codex 对数学正确性、模型合理性和创新性的 Stage 3/5 裁决。
 
 工作区已有状态时直接恢复，不重复询问题号、队伍人数、成员分工、截止时间或 fast/standard/championship 模式。
 

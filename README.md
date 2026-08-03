@@ -1,7 +1,7 @@
 # cumcm-skill
 
-![version](https://img.shields.io/badge/version-v2.0-8A2BE2?style=flat)
-![tests](https://img.shields.io/badge/tests-110%20passed-brightgreen?style=flat&logo=python&logoColor=white)
+![version](https://img.shields.io/badge/version-v2.1-8A2BE2?style=flat)
+![tests](https://img.shields.io/badge/tests-117%20passed-brightgreen?style=flat&logo=python&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat&logo=python&logoColor=white)
 ![CUMCM](https://img.shields.io/badge/CUMCM%20%7C%20national--contest-workflow-FF6B00?style=flat)
 ![agents](https://img.shields.io/badge/agents-Claude%20Code%20%2B%20Codex-1f2328?style=flat&logo=anthropic&logoColor=white)
@@ -20,8 +20,10 @@
 
 | 常见翻车 | 本 Skill 的应对 |
 |---|---|
+| 题意口径没固定，复杂算法算得很漂亮但对象、单位或聚合方式错了 | `quality_contract.json` 逐问固定分析单位、指标、约束、不变量、基线、保真度与结论边界 |
 | 模型和代码不一致，论文里写的公式和实际跑的不是一回事 | Codex 出正式 `model_spec.md`，Claude 按契约实现，偏离必须写进 `model_deviations.md` |
 | 结果跑不出来 / 换台机器复现不了 | `run_manifest.json` 强制登记 `run_id`、`seed`、命令、代码和结果路径 |
+| 摘要、正文、图表来自不同轮运行，核心数字互相打架 | `result_registry.json` 作为核心数字唯一索引，登记单位、作用域、来源定位和证据文件 |
 | AI 自己夸自己通过，占位符和 `TODO` 直接进终稿 | Stage 2/4/6 有**脚本级预检**，占位符、断图、引用错号、凭据残留直接拦住，不是"AI 说没问题" |
 | 换客户端上下文全丢，只能复制聊天记录 | 交接走 `state/workflow.json` + 标准交接单，新会话读文件就能接上 |
 
@@ -37,7 +39,8 @@ Claude 写实现和论文，Codex 独立审计。审不过就打回重做（Stag
 **2. 机械化质量门，拦得住幻觉**
 `validate_stage.py` 在关键流转点强制运行，不通过就**报错并且不改状态**，绕不过去。它检查的是机器能确定判定的东西：
 
-- 模型规格改了但结果没重跑（checksum 不匹配）
+- 模型规格或质量契约改了但结果没重跑（checksum 不匹配）
+- 逐问 id 不一致、质量契约未填，或某问没有 primary 结果指标
 - 论文里残留 `TODO` / `FIXME` / 模板占位符
 - 插图路径解析不到文件，或引用了已标记作废的图
 - 正文引用编号在参考文献里找不到对应条目
@@ -157,7 +160,7 @@ $cumcm-skill 帮我做这道题，题面和附件在 input/
 $cumcm-skill 继续
 ```
 
-Codex 读状态文件，发现自己是 Stage 1 的 owner，开始正式建模：出 `model_spec.md`、`implementation_contract.md`、文献查询计划。完事后告诉你切回 Claude。
+Codex 读状态文件，发现自己是 Stage 1 的 owner，开始正式建模：出 `model_spec.md`、`quality_contract.json`、`implementation_contract.md`、文献查询计划。完事后告诉你切回 Claude。
 
 ### 第 3 步：来回接力，直到完成
 
@@ -199,8 +202,8 @@ Stage 6 结束后，`paper.md` 就在项目根目录。你要做的：
 | Stage | 谁干 | 干什么 | 产出 |
 |---|---|---|---|
 | 0 | Claude | 读题、清点附件、搭事实框架 | `artifacts/problem_analysis.md`、`data_inventory.md` |
-| 1 | Codex | 查漏、定正式模型、写实现契约 | `model_spec.md`、`implementation_contract.md`、文献计划 |
-| 2 | Claude | 处理数据、写代码、求解、出图 | `code/`、`results/`、`figures/`、`run_manifest.json` |
+| 1 | Codex | 查漏、定正式模型、冻结逐问质量契约 | `model_spec.md`、`quality_contract.json`、`implementation_contract.md`、文献计划 |
+| 2 | Claude | 处理数据、写代码、求解、验证并登记核心结果 | `code/`、`results/`、`figures/`、`result_registry.json`、`run_manifest.json` |
 | 3 | Codex | 审模型—代码—结果是否一致、够不够稳健 | `reviews/solution_audit.md`，可退回 Stage 2 |
 | 4 | Claude | 基于已验证产物写论文 | `paper_draft.md`、支撑材料清单 |
 | 5 | Codex | 终审逻辑、数学、结果、文献 | `final_review.md`、`final_patch_plan.json`，可退回 Stage 4 |
@@ -301,9 +304,13 @@ project/
 │   ├── artifact_manifest.json  # 产物登记，带 sha256
 │   └── handoffs/               # 历史交接单
 ├── artifacts/
-│   └── run_manifest.json       # 可复现运行清单
+│   ├── quality_contract.json   # 逐问语义、验证义务与结论边界
+│   └── run_manifest.json       # 可复现运行清单与契约校验和
 ├── literature/                 # 查询计划、文献库、claim map
-├── code/  results/  figures/
+├── code/
+├── results/
+│   └── result_registry.json    # 核心数字唯一索引
+├── figures/
 ├── reviews/
 │   └── subagents/              # 专家报告，不是流程状态
 ├── paper_workspace/
@@ -320,11 +327,11 @@ project/
 
 Stage 2、4、6 的完成条件由 `scripts/validate_stage.py` 机械判定，`workflow.py` 在 2→3、4→5 的 `handoff` 和 Stage 6 的 `complete` 处强制执行。失败则命令报错且**不修改** `workflow.json`。Stage 3→2、5→4 的退回不跑完成预检。
 
-- **Stage 2**：规格文件缺失；`run_manifest.json` 未填；`run_id` / `input_fingerprint` 与状态不一致；`spec_checksum` 与 `model_spec.md` 实际哈希不符；子问题缺 `command` / `seed` / `code` / `results` / `figures`；声明的文件不存在或为空
-- **Stage 4**：草稿或分节缺失；残留 `TODO` / `FIXME` / `TBD` / 占位符；图片路径解析不到；有标题但正文空；引用编号在参考文献无对应条目；命中凭据模式；引用了 `needs_revision` 或 `stale` 的图
-- **Stage 6**：`paper.md` 缺失或为空；`final_patch_plan.json` 不是 `verdict=passed, target_stage=6`；仍有 `pending` 条目；`blocker` / `high` 被写成 `accepted`；`accepted` 没写 `resolution_note`；`paper.md` 未以 `status=final` 登记
+- **Stage 2**：规格文件缺失；新工作区的 `quality_contract.json` / `result_registry.json` 未填或未登记；逐问 id 不一致；每问缺 primary 指标；`run_manifest.json` 未填；状态、规格或质量契约 checksum 不一致；子问题缺 `command` / `seed` / `code` / `results` / `figures`；声明的文件不存在或为空
+- **Stage 4**：新工作区的质量契约或结果注册表失效；草稿或分节缺失；残留 `TODO` / `FIXME` / `TBD` / 占位符；图片路径解析不到；有标题但正文空；引用编号在参考文献无对应条目；命中凭据模式；引用了 `needs_revision` 或 `stale` 的图
+- **Stage 6**：新工作区的结果注册表失效；`paper.md` 缺失或为空；`final_patch_plan.json` 不是 `verdict=passed, target_stage=6`；仍有 `pending` 条目；`blocker` / `high` 被写成 `accepted`；`accepted` 没写 `resolution_note`；`paper.md` 未以 `status=final` 登记
 
-预检**不覆盖**数学正确性、结果合理性和创新性 —— 那些由 Codex Stage 3/5 人工审查，不能包装成硬验证。明细见 `references/handoff_protocol.md`。
+预检**不覆盖**数学正确性、结果合理性和创新性 —— 它只确认契约已填写、id/checksum/路径一致、核心结果可定位；不变量是否真的成立、基线是否合理、结论是否越界仍由 Codex Stage 3/5 审查。通用分题型审计清单见 `references/audit/competition_quality_gates.md`，协议明细见 `references/handoff_protocol.md`。
 
 </details>
 
