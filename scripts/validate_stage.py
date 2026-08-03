@@ -23,6 +23,15 @@ PATCH_PLAN_SCHEMA = "1.0"
 
 ARTIFACT_STAGES = set(range(7))
 ARTIFACT_OWNERS = {"claude", "codex"}
+OWNER_BY_STAGE = {
+    0: "claude",
+    1: "codex",
+    2: "claude",
+    3: "codex",
+    4: "claude",
+    5: "codex",
+    6: "claude",
+}
 ARTIFACT_STATUSES = {"draft", "verified", "needs_revision", "stale", "final"}
 UNUSABLE_STATUSES = {"needs_revision", "stale"}
 
@@ -176,17 +185,17 @@ def scan_images(report: Report, workspace: Path, document: Path, text: str) -> l
     base = document.parent
     for match in IMAGE_PATTERN.finditer(text):
         raw = match.group(1).strip("<>")
+        label = f"{document.name}:{line_of(text, match.start())}"
+        if Path(raw).is_absolute() or re.match(r"^[A-Za-z]:[\\/]", raw):
+            report.error(f"{label} 图片必须使用相对路径: {raw}")
+            continue
         if urlsplit(raw).scheme or raw.startswith("//"):
             continue
         target = unquote(raw.split("#", 1)[0])
         if not target:
             continue
-        label = f"{document.name}:{line_of(text, match.start())}"
         candidate = (base / Path(target)).resolve()
         root = workspace.resolve()
-        if Path(target).is_absolute() or re.match(r"^[A-Za-z]:", target):
-            report.error(f"{label} 图片必须使用相对路径: {target}")
-            continue
         if root not in candidate.parents:
             report.error(f"{label} 图片路径逃出工作区: {target}")
             continue
@@ -311,18 +320,19 @@ def validate_run_manifest(
     report: Report,
     workspace: Path,
     state: dict[str, object] | None,
-) -> None:
+) -> set[Path]:
+    declared: set[Path] = set()
     path = workspace / "artifacts" / "run_manifest.json"
     if not path.is_file():
         report.error("缺少 artifacts/run_manifest.json；Stage 2 必须记录可复现运行清单")
-        return
+        return declared
     data, error = load_json(path)
     if error:
         report.error(error)
-        return
+        return declared
     if not isinstance(data, dict):
         report.error("run_manifest.json 顶层必须是对象")
-        return
+        return declared
     if data.get("_schema_version") != RUN_MANIFEST_SCHEMA:
         report.error(f"run_manifest.json 的 _schema_version 必须是 {RUN_MANIFEST_SCHEMA}")
 
@@ -353,20 +363,22 @@ def validate_run_manifest(
             )
     if not isinstance(data.get("environment"), str) or not data["environment"].strip():
         report.error("run_manifest.json 必须记录 environment（解释器与关键依赖版本）")
-    validate_run_manifest_subproblems(report, workspace, data.get("subproblems"))
+    declared.update(validate_run_manifest_subproblems(report, workspace, data.get("subproblems")))
     deviations = data.get("model_deviations")
     if deviations is not None:
         check_declared_path(report, workspace, deviations, "run_manifest.model_deviations")
+    return declared
 
 
 def validate_run_manifest_subproblems(
     report: Report,
     workspace: Path,
     subproblems: object,
-) -> None:
+) -> set[Path]:
+    declared: set[Path] = set()
     if not isinstance(subproblems, list) or not subproblems:
         report.error("run_manifest.json 的 subproblems 必须是非空数组")
-        return
+        return declared
     seen: set[str] = set()
     for index, entry in enumerate(subproblems):
         context = f"run_manifest.subproblems[{index}]"
@@ -394,7 +406,10 @@ def validate_run_manifest_subproblems(
                 report.error(f"子问题 {label} 的 {field} 必须是非空数组")
                 continue
             for item in values:
-                check_declared_path(report, workspace, item, f"子问题 {label} 的 {field}")
+                resolved = check_declared_path(report, workspace, item, f"子问题 {label} 的 {field}")
+                if resolved is not None:
+                    declared.add(resolved)
+    return declared
 
 
 def validate_artifact_manifest(
@@ -456,15 +471,30 @@ def validate_artifact_entry(
     stage = entry.get("stage")
     if isinstance(stage, bool) or not isinstance(stage, int) or stage not in ARTIFACT_STAGES:
         report.error(f"{context} stage 必须是 0..6 的整数")
-    if entry.get("owner") not in ARTIFACT_OWNERS:
+    owner = entry.get("owner")
+    if owner not in ARTIFACT_OWNERS:
         report.error(f"{context} owner 必须是 claude 或 codex")
+    elif isinstance(stage, int) and stage in OWNER_BY_STAGE and owner != OWNER_BY_STAGE[stage]:
+        report.error(f"{context} Stage {stage} 的 owner 必须是 {OWNER_BY_STAGE[stage]}")
     status = entry.get("status")
     if status not in ARTIFACT_STATUSES:
         report.error(
             f"{context} status 必须属于 {', '.join(sorted(ARTIFACT_STATUSES))}"
         )
-    if not isinstance(entry.get("inputs"), list):
+    inputs = entry.get("inputs")
+    if not isinstance(inputs, list):
         report.error(f"{context} inputs 必须是数组（可为空）")
+    else:
+        for input_index, raw_input in enumerate(inputs):
+            input_context = f"{context}.inputs[{input_index}]"
+            if not isinstance(raw_input, str) or not raw_input.strip():
+                report.error(f"{input_context} 必须是非空字符串")
+                continue
+            input_path, input_error = resolve_inside(workspace, raw_input)
+            if input_error:
+                report.error(f"{input_context} {input_error}")
+            elif input_path is not None and not input_path.exists():
+                report.error(f"{input_context} 声明的输入不存在: {raw_input}")
 
     resolved = check_declared_path(report, workspace, entry.get("path"), context)
     if resolved is None:
@@ -478,6 +508,28 @@ def validate_artifact_entry(
     elif sha256_file(resolved) != checksum:
         report.error(f"{context} sha256 与文件当前内容不一致: {entry.get('path')}")
     return resolved
+
+
+def validate_stage_2_registry(
+    report: Report,
+    workspace: Path,
+    declared: set[Path],
+    registry: dict[Path, dict[str, object]],
+) -> None:
+    for path in sorted(declared, key=str):
+        relative = path.relative_to(workspace.resolve()).as_posix()
+        entry = registry.get(path)
+        if entry is None:
+            report.error(f"run_manifest 声明的 Stage 2 产物未登记到 artifact manifest: {relative}")
+            continue
+        if entry.get("stage") != 2:
+            report.error(f"run_manifest 声明的产物 {relative} 在 artifact manifest 中 stage 必须是 2")
+        if entry.get("owner") != "claude":
+            report.error(f"run_manifest 声明的产物 {relative} 在 artifact manifest 中 owner 必须是 claude")
+        if entry.get("status") in UNUSABLE_STATUSES:
+            report.error(
+                f"run_manifest 声明的产物 {relative} 状态为 {entry.get('status')}，不得进入 Stage 3"
+            )
 
 
 def validate_patch_plan(report: Report, workspace: Path) -> None:
@@ -542,6 +594,11 @@ def validate_patch_item(
         if isinstance(target.get("file"), str) and target["file"].strip():
             check_declared_path(report, workspace, target["file"], f"{label} 的 target.file")
 
+    for field in ("problem", "evidence", "action", "acceptance_check"):
+        value = entry.get(field)
+        if not isinstance(value, str) or not value.strip():
+            report.error(f"{label} 的 {field} 必须是非空字符串")
+
     severity = entry.get("severity")
     if severity not in PATCH_SEVERITIES:
         report.error(f"{label} 的 severity 必须属于 {', '.join(sorted(PATCH_SEVERITIES))}")
@@ -594,8 +651,9 @@ def validate_stage_2(workspace: Path) -> Report:
             "artifacts/model_deviations.md",
         ),
     )
-    validate_run_manifest(report, workspace, state)
-    validate_artifact_manifest(report, workspace, state)
+    declared = validate_run_manifest(report, workspace, state)
+    registry = validate_artifact_manifest(report, workspace, state)
+    validate_stage_2_registry(report, workspace, declared, registry)
     return report
 
 

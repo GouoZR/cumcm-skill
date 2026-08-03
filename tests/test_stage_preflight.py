@@ -129,6 +129,7 @@ def build_stage2_workspace(workspace: Path) -> dict[str, object]:
 
     register(workspace, [
         artifact(workspace, "artifacts/model_spec.md", 1, "codex", "verified"),
+        artifact(workspace, "code/q1_solve.py", 2, "claude", "verified"),
         artifact(workspace, "results/q1_result.csv", 2, "claude", "verified"),
         artifact(workspace, "figures/q1_result.png", 2, "claude", "verified"),
     ])
@@ -235,6 +236,28 @@ class Stage2PreflightTests(unittest.TestCase):
             self.assertTrue(any("spec_checksum" in item for item in report.errors))
 
 
+    def test_run_manifest_outputs_must_be_registered(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            register(workspace, [])
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("未登记到 artifact manifest" in item for item in report.errors))
+
+    def test_registered_run_output_cannot_be_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            path = workspace / "state" / "artifact_manifest.json"
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest["artifacts"][1]["status"] = "stale"
+            write_json(path, manifest)
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("不得进入 Stage 3" in item for item in report.errors))
+
+
 class ArtifactManifestTests(unittest.TestCase):
     def test_wrong_checksum_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -269,6 +292,32 @@ class ArtifactManifestTests(unittest.TestCase):
             report = validate_stage.validate_stage(workspace, 2)
             self.assertFalse(report.ok)
             self.assertTrue(any("逃出工作区" in item for item in report.errors))
+
+
+    def test_owner_must_match_artifact_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            path = workspace / "state" / "artifact_manifest.json"
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest["artifacts"][1]["owner"] = "codex"
+            write_json(path, manifest)
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("Stage 2 的 owner 必须是 claude" in item for item in report.errors))
+
+    def test_artifact_input_must_stay_inside_workspace_and_exist(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            build_stage2_workspace(workspace)
+            path = workspace / "state" / "artifact_manifest.json"
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest["artifacts"][1]["inputs"] = ["../outside.csv", "input/missing.csv"]
+            write_json(path, manifest)
+            report = validate_stage.validate_stage(workspace, 2)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("inputs[0] 路径逃出工作区" in item for item in report.errors))
+            self.assertTrue(any("inputs[1] 声明的输入不存在" in item for item in report.errors))
 
 
 class Stage4PreflightTests(unittest.TestCase):
@@ -315,6 +364,19 @@ class Stage4PreflightTests(unittest.TestCase):
             report = validate_stage.validate_stage(workspace, 4)
             self.assertFalse(report.ok)
             self.assertTrue(any("图片路径不存在" in item for item in report.errors))
+
+    def test_windows_absolute_image_path_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            self.prepare(workspace)
+            draft = workspace / "paper_draft.md"
+            draft.write_text(
+                draft.read_text(encoding="utf-8") + "\n![绝对路径](C:\\temp\\figure.png)\n",
+                encoding="utf-8",
+            )
+            report = validate_stage.validate_stage(workspace, 4)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("图片必须使用相对路径" in item for item in report.errors))
 
     def test_missing_reference_entry_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -387,6 +449,23 @@ class Stage6PreflightTests(unittest.TestCase):
             report = validate_stage.validate_stage(workspace, 6)
             self.assertFalse(report.ok)
             self.assertTrue(any("paper.md" in item for item in report.errors))
+
+    def test_patch_required_text_fields_cannot_be_empty(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            self.prepare(workspace, [{
+                "id": "P1",
+                "target": {"file": "paper.md", "anchor": "## 摘要"},
+                "severity": "medium",
+                "problem": "",
+                "evidence": "final_review.md 第 2 节",
+                "action": "补一句验证",
+                "acceptance_check": "摘要含验证方式",
+                "status": "verified",
+            }])
+            report = validate_stage.validate_stage(workspace, 6)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("problem 必须是非空字符串" in item for item in report.errors))
 
     def test_pending_patch_blocks_delivery(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
