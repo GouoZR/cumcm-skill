@@ -1,244 +1,171 @@
-# cumcm-skill(v1.0)
+# cumcm-skill v2.0
 
-> CUMCM 国赛 72 小时建模工作流 · Claude Code 独占 · 全程问答式
+CUMCM 全国大学生数学建模竞赛的 **Codex + Claude Code 双 Agent 文件化接力工作流**。
 
-**基座致谢**：本项目基于 [mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0) 深度定制，原作者为**徐子锐** ([handsomeZR-netizen](https://github.com/handsomeZR-netizen))。上游的流程设计、评分体系与材料组织是本项目的地基。
+- Claude Code：题面解析、代码与求解、论文写作、最终 Markdown 装配
+- Codex：查漏补缺、正式建模、求解审计、论文终审
+- 共享接口：`state/workflow.json`、阶段产物和标准 handoff
+- 最终交付：`paper.md`；Word/WPS 排版和 PDF 由用户手工完成
 
-[![Version](https://img.shields.io/badge/version-v1.0-6f42c1)](./SKILL.md)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](./scripts/doctor.py)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-only-D97757)](./SKILL.md)
-[![License](https://img.shields.io/badge/license-MIT-22c55e)](./LICENSE)
+本项目基于 [mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) v6.1.0 演进而来，感谢原作者徐子锐（handsomeZR-netizen）的流程设计与资料组织。v1 的 10 阶段资料仍保留用于旧项目兼容；v2 新项目使用 7 阶段流程。
 
-## 想打数模的朋友们可以看一看本小白第一次写的skill，欢迎指导提issue，这是针对数模小白做的一个自动化skill
+## 为什么改成双 Agent 接力
 
-作者大一第一次数模手忙脚乱。因此一直想开发一个自动化数模的过程，让大家把时间可以更好的用在建模和创新上。伴随着今年Agent的大火，这一愿望也可以逐渐落地，
-最开始是看到[mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0)这个skill后觉得很好用，因此想要加一些自己的东西和看法。目前这个skill也在测试阶段，还有很多不足。
-希望大家也可以自己clone到本地后加一些自己的东西，我相信同一个skill大家加入自己的想法也能做出不同的优秀的作品。
-最后希望这个skill可以帮到你，祝各位国赛顺利！
+两个客户端不共享聊天上下文，因此不能依靠“把上一次对话复制过来”。v2 把模型规格、实现契约、结果、审计意见和论文修改单全部落到工作区，由状态文件指定唯一负责人。
 
-## 为了可以更好的使用，你还需要两份 API key
+```mermaid
+flowchart LR
+  C0["Claude 0：题面与附件"] --> X1["Codex 1：正式建模"]
+  X1 --> C2["Claude 2：实现与求解"]
+  C2 --> X3["Codex 3：求解审计"]
+  X3 -->|退回| C2
+  X3 -->|通过| C4["Claude 4：Markdown 写作"]
+  C4 --> X5["Codex 5：论文终审"]
+  X5 -->|退回| C4
+  X5 -->|通过| C6["Claude 6：paper.md"]
+  C6 --> U["用户：排版与 PDF"]
+```
 
-本 skill 依赖两个外部服务：**Sciverse**（学术文献检索）和 **PackyAPI**（AI 概念图生成）。第一次使用前需要准备好两份 key，之后由 Agent 帮你一键配置，后续不再需要你重复操作。
+## 单一 Skill 真源
 
-| Key | 用途 | 获取地址 | 费用 |
-|------------------|------------------------------------------------|------------------------------------------------------|-----------------------------|
-| **Sciverse Token** | 全阶段文献检索与引用溯源（`SCIVERSE_API_TOKEN`） | [sciverse.space/tokens](https://sciverse.space/tokens) | 免费（需注册） |
-| **PackyAPI Token** | gpt-image-2 学术概念图生成（`PACKYAPI_TOKEN`） | [packyapi.com](https://www.packyapi.com) | 按次计费，约 $0.006~$0.712/次 |
+不要在 `.agents/skills` 和 `.claude/skills` 维护两份独立副本。推荐把主仓库放在：
 
-### 怎么用（一键配置）
+```text
+~/.agents/skills/cumcm-skill
+```
 
-1. 触发本 skill（说"开始建模" / "打国赛" / "CUMCM"）
-2. Agent 会先检查两份 key 是否已配置
-3. **未配置时，直接把两份 key 发给我即可**，Agent 会自动完成：
-   - 检查并安装 Sciverse MCP Server（`claude mcp add`）
-   - 把两份 key 写入 `~/.claude/settings.json` 的 `env` 字段
-   - 验证配置生效
-4. 配置只需做一次，之后再次使用自动跳过
+再让 Claude Code 的发现路径指向同一目录。Windows 可以使用 Junction，但在创建前必须先比较并备份旧副本：
 
-> 首次配置需要你在终端授权 Agent 执行安装命令。key 只会写入你自己的 `~/.claude/settings.json`，不会上传到任何地方，也不会出现在论文或代码里。
+```powershell
+$source = [IO.Path]::GetFullPath("$HOME\.agents\skills\cumcm-skill")
+$target = [IO.Path]::GetFullPath("$HOME\.claude\skills\cumcm-skill")
+$backup = "$target.backup-$(Get-Date -Format yyyyMMdd-HHmmss)"
 
----
+# 先确认 target 是 clean 的独立副本，再保留整目录备份
+if ((git -C $target status --porcelain)) { throw "Claude Skill 存在未合并修改，停止迁移" }
+Move-Item -LiteralPath $target -Destination $backup
+New-Item -ItemType Junction -Path $target -Target $source
+Get-Item -LiteralPath $target | Select-Object FullName, LinkType, Target
+```
 
-## 一眼看出它和别的建模 Prompt 有什么不同
+以后只在主仓库修改和提交。
 
-别的建模 skill 给你一段超长 Prompt，剩下的全靠你自己：自己维护状态、自己记得改摘要、自己查文献、自己编译格式。**cumcm-skill 把 72 小时变成一条流水线——你负责判断，它负责执行。**
+## 快速开始
 
-| 传统建模 Prompt | cumcm-skill |
-|------------------------------|--------------------------------------------------------|
-| 一段超长指令，靠模型自由发挥 | **10 个阶段**，每步有明确输入、产物和退出条件 |
-| 状态在聊天记录里，换上下文就丢 | `decision_log.json` 持久化，换模型/重启/换人都不丢进度 |
-| 文献靠猜，引用心虚 | **Sciverse 4.66 亿论文**检索，全阶段可溯源引用 |
-| 一个人从头写到尾 | Stage 5 求解、Stage 8 写作**自动多 Agent 并行** |
-| 最后 LaTeX 折腾一晚上 | 全程 Markdown，交付即 `paper.md`，不碰 LaTeX |
-| 好不好全凭感觉 | **题型加权 + 59 份获奖论文经验分位**，verdict 由脚本重算 |
+### 1. 准备项目
 
-## 国赛 72 小时，为你省下三件事
+```text
+my-cumcm-project/
+└── input/
+    ├── problem.pdf        # 或 problem.md
+    └── data/              # 题目附件
+```
 
-**省心** —— 全程问答式，你只回答编号问题，Agent 维护状态、调脚本、整理产物。
+用户不需要提前填写队伍人数、成员能力、截止时间或运行模式。
 
-**省时间** —— 求解和写作阶段多 Agent 并行；Sciverse 真实文献检索，选题、建模、引用一步到位。
+### 2. 在 Claude Code 启动 Stage 0
 
-**省风险** —— 断点续赛 + 每阶段评分把关 + Stage 9 合规门，提交前不再靠记忆补匿名、页数和 AI 披露。
-
-## 10 个阶段
-
-| Stage | 任务 | 关键产物 | 主要检查 |
-|----:|------------------|-------------------------------------------------|--------------------------|
-| 0 | 团队启动与资料预扫 | 竞赛、角色、时限、环境、规则基线 | 可执行性与合规入口 |
-| 1 | 多题比较与选题 | 选择理由、放弃项、题型判断 | 资源匹配与失败风险 |
-| 2 | 问题拆解 | 子问、变量、约束、依赖图 | 逻辑完整性 |
-| 3 | 模型选型 | 候选模型、证据、反事实与淘汰理由 | 模型与问题的匹配程度 |
-| 4 | Foundation | 假设、符号、术语表 | 一致性与可解释性 |
-| 5 | 递归求解 Q1…Qn | formulation、代码、结果、图表 | per-Qi 评分与定向回修 |
-| 6 | 稳健性分析 | 风险匹配的验证、稳健区间、失败边界 | 灵敏度与结论可靠性 |
-| 7 | 模型评价 | 优点、局限、改进、迁移条件 | 边界是否诚实、结论能否推广 |
-| 8 | 论文装配 | `paper_workspace/*.md` 装配为 `paper.md`、AI 台账 | 跨阶段一致性与格式合规 |
-| 9 | 提交前终审 | 最终 `paper.md`、支持材料、Panel 记录 | 合规门、证据链与视觉检查 |
-
-## 反馈模式
-
-三种模式使用同一条主流程，只调整反馈预算和评审深度。
-
-| Mode | 反馈层 | 适用场景 |
-|--------------|----------------------------|---------------------------|
-| `fast` | L1 单轮 | 选题试跑、快速 sanity check |
-| `standard` | L1 + L2 | 默认比赛流程 |
-| `championship` | L1 + L2 + L3 + L4 + red-team | 终稿前的深度评审 |
-
-评分工具输出的是流程状态，而不是奖项预测：
-
-`block` · `refine` · `refine_partial` · `pass_with_review` · `pass` · `pass_early` · `carryover`
-
-## 竞赛支持
-
-| 竞赛包 | 语言与模板 | 当前材料 | 可信度说明 |
-|--------------|------------------------------|---------------------------------------------------------------------------------|----------------------------------------|
-| **CUMCM 国赛** | 中文；Markdown 交付 | 收集 91 份公开论文源样本，其中 59 份成功提取文本并进入统计；42 项维护者反模式检查 | 观察分位不是官方门槛，规则以当届通知为准 |
-
-截至 2026-08-01，仓库已核对：
-
-- [CUMCM 2026 竞赛规则](https://www.mcm.edu.cn/html_cn/node/9d8e511fe7a1447b35f53a82c908e2e0.html)
-- [CUMCM 2026 论文格式规范](https://www.mcm.edu.cn/html_cn/node/4cd596519c9eb9fbd866398f6df0caa3.html)
-
-这些链接构成仓库当前的规则基线，但不能替代参赛当年的官方文件。
-
-## Quick Start
+明确调用 `$cumcm-skill`。首次初始化等价于：
 
 ```bash
-# 1. 安装 skill（全局）
-git clone https://github.com/GouoZR/cumcm-skill.git \
-  ~/.claude/skills/cumcm-skill
-
-# 2. 可选：赛前 preflight 检查
-python ~/.claude/skills/cumcm-skill/scripts/doctor.py \
-  --competition cumcm
-
-# 3. 进入建模项目，启动
-mkdir -p my-modeling-project
-cd my-modeling-project
-claude
+python <skill>/scripts/init_workspace.py /path/to/my-cumcm-project
 ```
 
-首次启动时，Agent 会**自动检查并配置外部服务**：把两份 API key（Sciverse + PackyAPI）发给我即可一键完成，详见[「两份 API key」](#为了可以更好的使用你还需要两份-api-key)。不需要手动安装 MCP 或改配置文件。
+### 3. 按 owner 切换客户端
 
-进入 Claude Code 后输入：
-
-```text
-开始建模
-```
-
-或：
-
-```text
-使用 cumcm-skill 打国赛
-```
-
-首次启动时，Agent 会先确认竞赛、题目、队伍能力、截止时间和题面位置，然后创建共享状态并进入 Stage 0。工作区已经存在状态时，则从最近的检查点继续。
-
-### 可选：完整数值环境
-
-核心工作流和 `scripts/doctor.py` 不依赖完整的科学计算栈。只有在需要运行仓库中的建模起步代码时，才需要安装额外依赖：
+随时查看：
 
 ```bash
-python -m pip install -r \
-  ~/.claude/skills/cumcm-skill/templates/shared/requirements.txt
+python <skill>/scripts/workflow.py --workspace /path/to/my-cumcm-project status
 ```
 
-本 skill 交付 Markdown；如需 DOCX/PDF，请自行转换（例如在 Word 中打开 `paper.md`）。
+- `current_owner: claude`：在 Claude Code 继续；
+- `current_owner: codex`：在 Codex 继续；
+- `current_owner: user` 且 `status: complete`：检查 `paper.md` 并手工排版。
 
-## 工作区产物
+## 7 阶段
+
+| Stage | Owner | 主要产物 |
+|---|---|---|
+| 0 题面解析 | Claude | `artifacts/problem_analysis.md`、`data_inventory.md` |
+| 1 正式建模 | Codex | `model_spec.md`、`implementation_contract.md`、文献计划 |
+| 2 实现求解 | Claude | `code/`、`results/`、`figures/`、运行清单 |
+| 3 求解审计 | Codex | `reviews/solution_audit.md`；可退回 Stage 2 |
+| 4 论文写作 | Claude | `paper_draft.md`、支撑材料清单 |
+| 5 论文终审 | Codex | `final_review.md`、`final_patch_plan.json`；可退回 Stage 4 |
+| 6 最终装配 | Claude | `paper.md`、`submission_checklist.md` |
+
+完整职责见 `references/workflow/`，交接规则见 `references/handoff_protocol.md`。
+
+## 工作区结构
 
 ```text
-my-modeling-project/
+project/
+├── input/
 ├── state/
-│   └── decision_log.json       # 决策、评分、回退、规则与 AI 使用台账
-├── results/                    # 结构化结果与可复现实验输出
-├── figures/                    # 最终图表（PNG ≥300 DPI + SVG）
-├── paper_workspace/            # 01_abstract.md … 11_ai_use_report.md
-├── paper_output/               # 用户自行转换 DOCX/PDF 的输出目录（可选）
-└── support_materials/          # 代码、数据清单与竞赛要求的披露材料
+│   ├── workflow.json
+│   ├── capabilities.json
+│   ├── artifact_manifest.json
+│   └── handoffs/
+├── artifacts/
+├── literature/
+├── code/
+├── results/
+├── figures/
+├── reviews/
+├── paper_workspace/
+├── paper_draft.md
+└── paper.md
 ```
 
-`decision_log.json` 负责保存流程状态，但不会自动同步工作区之外的文件。
+`revision` 用于防止两个客户端覆盖彼此状态。非当前 owner 不得修改共享产物。
 
-## 辅助工具
+## 文献：可选服务，强证据链
 
-| 工具 | 用途 | 典型调用 |
-|-----------------------------------|-----------------------------------------------------|-------------------------------------------------------------------|
-| `scripts/doctor.py` | 检查 skill 结构、竞赛包与工作区 | `python <skill>/scripts/doctor.py --competition cumcm` |
-| `scripts/score_artifact.py` | 校验 critic JSON、重算加权分数与 verdict、聚合 per-Qi | `python <skill>/scripts/score_artifact.py --stage 5 --critique ...` |
-| `scripts/extract_diff.py` | 生成并应用 section-level patch | `python <skill>/scripts/extract_diff.py --apply ...` |
-| `scripts/render_ai_usage.py` | 根据台账生成 CUMCM AI 使用披露材料 | `python <skill>/scripts/render_ai_usage.py --competition cumcm ...` |
-| `scripts/generate_concept_image.py` | 通过 PackyAPI 生成学术概念图 | `python <skill>/scripts/generate_concept_image.py --prompt ...` |
+Sciverse 保留为首选文献能力，但不是启动硬依赖：
 
-完整 CLI 参数与依赖边界见 [`scripts/README.md`](./scripts/README.md)。
+- Codex提出查询计划和待支撑 claim；
+- 任一配置了 Sciverse 的宿主都可以执行检索；
+- 检索结果统一写入 `literature/library.json` 和 `claim_map.json`；
+- Claude只引用已核验记录；Codex检查 claim—证据关系；
+- metadata-only 记录不能证明实质结论；
+- 国内来源优先级为官方文件/标准、同行评审期刊、学位论文、会议或研究报告，再补充国外高质量论文。
 
-## 仓库结构
+所有 MCP 必须配置在用户全局作用域，禁止项目级 `.mcp.json`。API token 不进入聊天、仓库、工作区状态、日志、论文或交接单。详见 `references/sciverse_guide.md`。
+
+## 生图：默认关闭
+
+PackyAPI 概念图是可选增强项，只有用户明确要求时才启用。技术表达优先：
 
 ```text
-SKILL.md                         # 工作流主入口与调度协议
-AGENTS.md                        # 仓库维护约定
-competitions/
-  cumcm/                         # 规则、59 份样本统计、写作启发、评分覆盖、真题标答库与模板骨架
-references/
-  stage_00_* ... stage_09_*      # 按阶段加载的执行细则
-  feedback_layer1_* ... layer4_* # 阶段评分、回检、Panel 与校准
-  model_catalog.md               # 模型候选目录
-  sciverse_guide.md              # Sciverse MCP 接入指南
-  algorithms/                    # 7 类 58 算法详解
-  writing/                       # 写作规范、章节模板、自审框架
-  visualization/                 # 图表规范、审计与复现脚本
-templates/
-  shared/                        # 状态、AI 台账、表格与 Python 起步代码
-config/dim_weights.json          # 题型 × 阶段的评分权重
-scripts/                         # 环境检查、评分、差分、披露、概念图与维护工具
-tests/                           # 回归测试与 fixture
+Python 数据图 > Mermaid/SVG 技术图 > AI 概念图
 ```
 
-## v1.0
+AI 图不得承载唯一的算法说明、关键数字、参数或公式。服务不可用时不阻断工作流。
 
-v1.0 是 cumcm-skill 作为独立 skill 的第一个版本。它基于 [mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0, 作者: 徐子锐) 深度定制，并移除了上游的 MCM/电工杯支持、Codex 兼容层、LaTeX 与 Pandoc 依赖。
+## 主要脚本
 
-- 专精 CUMCM 国赛，Claude Code 独占，Markdown 交付（DOCX/PDF 由用户自行转换）
-- 集成 Sciverse MCP 真实文献检索，全阶段可溯源引用
-- 支持多 Agent 并行求解/写作/文献查阅
-- PackyAPI gpt-image-2 概念图 + Python 数据图双轨图表系统
-- 10 阶段 + L1/L2/L3/L4 四层反馈，题型 dim 加权，经验分位锚定评分
-- 5 个运行时脚本 + doctor 赛前预检 + 自动测试套件
+| 脚本 | 用途 |
+|---|---|
+| `scripts/init_workspace.py` | 初始化 v2 工作区，不覆盖已有状态 |
+| `scripts/workflow.py` | owner/revision 守卫、开始、交接、完成 |
+| `scripts/validate_handoff.py` | 校验 Markdown 交接单 |
+| `scripts/validate_literature.py` | 校验文献元数据和 claim 证据链 |
+| `scripts/assemble_paper.py` | 从草稿或分节装配 `paper.md`，不生成 PDF |
+| `scripts/doctor.py` | 检查 Skill、竞赛包和 v1/v2 工作区 |
+| `scripts/generate_concept_image.py` | 可选 PackyAPI 概念图 |
 
-## 边界与可信度
+旧版评分、差分修改和 AI 使用台账脚本继续保留，供兼容旧项目或按需复用。完整参数见 `scripts/README.md`。
 
-cumcm-skill 是协作与质量控制工具，不是自动获奖系统。
-
-使用它并不会消除建模本身的不确定性，也不能替代团队对公式、代码、数据、事实、引用和最终署名的责任。
-
-需要特别说明的是：
-
-- CUMCM 统计来自公开样本中成功提取文本的 59 份论文，可能受到年份、题型、来源和 PDF 可提取性的影响。
-- `winning_patterns.md`、经验分位和反模式清单属于维护者总结，不是官方 rubric。
-- 竞赛规则会变化。仓库保存的是最近一次核对的基线，正式提交前必须以当届官方通知和题目要求为准。
-- AI 生成的公式、代码、事实和引用必须由团队复核。台账和披露生成器帮助完整记录，但不代替合规判断。
-
-## 开发与验证
+## 验证
 
 ```bash
 python -m compileall -q scripts templates/shared/code_starter
 python -m unittest discover -s tests -p 'test_*.py' -v
 python scripts/doctor.py --competition cumcm
+git diff --check
 ```
 
-当工作流、模板或竞赛包发生变化时，请同步更新测试、版本号和规则核对日期。
+## 边界
 
-参与贡献前请先阅读 [`AGENTS.md`](./AGENTS.md)。Bug、规则更新与改进建议可以通过 Issue 提交。
-
-## License
-
-仓库原创代码与文档采用 [MIT License](./LICENSE)。运行时依赖和外部资料链接仍遵循各自的许可条款，详细边界见 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md)。
-
-上游项目：[mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) v6.1.0 by 徐子锐 (handsomeZR-netizen)。
-
----
-
-cumcm-skill 不替团队完成思考。
-
-它做的是让每一次判断都留下依据，让每一次修改都知道影响范围，也让一场 72 小时的建模协作最终能够被完整地交付。
+本 Skill 是协作和质量控制工具，不保证奖项。竞赛规则会变化，正式提交前必须核验当届官方通知。`paper.md` 中的公式、代码结果、事实、引用和 AI 使用披露均需参赛团队最终复核。

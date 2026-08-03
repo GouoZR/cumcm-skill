@@ -84,13 +84,35 @@ def run_checks(
 
     required_paths = (
         "SKILL.md",
+        "README.md",
         "AGENTS.md",
         "config/dim_weights.json",
+        "templates/shared/workflow_state.json",
+        "templates/shared/capabilities.json",
+        "templates/shared/artifact_manifest.json",
+        "templates/shared/handoff.md",
         "templates/shared/decision_log.json",
+        "scripts/init_workspace.py",
+        "scripts/workflow.py",
+        "scripts/validate_handoff.py",
+        "scripts/validate_literature.py",
+        "scripts/assemble_paper.py",
         "scripts/score_artifact.py",
         "scripts/extract_diff.py",
         "scripts/render_ai_usage.py",
         "templates/shared/ai_usage_ledger.json",
+        "references/runtime/codex.md",
+        "references/runtime/claude_code.md",
+        "references/handoff_protocol.md",
+        *tuple(f"references/workflow/stage_{stage:02d}_{name}.md" for stage, name in (
+            (0, "claude_intake"),
+            (1, "codex_modeling"),
+            (2, "claude_implementation"),
+            (3, "codex_audit"),
+            (4, "claude_writing"),
+            (5, "codex_final_review"),
+            (6, "claude_delivery"),
+        )),
     )
     missing = [item for item in required_paths if not (SKILL_ROOT / item).is_file()]
     checks.append(_check(
@@ -108,6 +130,12 @@ def run_checks(
 
     json_paths = [
         SKILL_ROOT / "config" / "dim_weights.json",
+        SKILL_ROOT / "templates" / "shared" / "workflow_state.json",
+        SKILL_ROOT / "templates" / "shared" / "capabilities.json",
+        SKILL_ROOT / "templates" / "shared" / "artifact_manifest.json",
+        SKILL_ROOT / "templates" / "shared" / "literature_library.json",
+        SKILL_ROOT / "templates" / "shared" / "literature_claim_map.json",
+        SKILL_ROOT / "templates" / "shared" / "final_patch_plan.json",
         SKILL_ROOT / "templates" / "shared" / "decision_log.json",
         SKILL_ROOT / "templates" / "shared" / "ai_usage_ledger.json",
     ]
@@ -150,6 +178,26 @@ def run_checks(
         if decision_schema_ok else "decision_log template is not a complete v3.1 state",
         "Restore the v3.1 decision-log template before using the workflow."
         if not decision_schema_ok else None,
+    ))
+
+    workflow_template_path = SKILL_ROOT / "templates" / "shared" / "workflow_state.json"
+    workflow_template = parsed.get(workflow_template_path, {})
+    workflow_schema_ok = (
+        isinstance(workflow_template, dict)
+        and workflow_template.get("_schema_version") == "4.0"
+        and workflow_template.get("current_stage") == 0
+        and workflow_template.get("current_owner") == "claude"
+        and workflow_template.get("revision") == 0
+        and isinstance(workflow_template.get("completed_stages"), list)
+        and isinstance(workflow_template.get("blocking_issues"), list)
+    )
+    checks.append(_check(
+        "workflow-schema",
+        workflow_schema_ok,
+        "workflow schema 4.0 with owner/revision guards"
+        if workflow_schema_ok else "workflow_state template is not a complete v4.0 state",
+        "Restore templates/shared/workflow_state.json before using v2."
+        if not workflow_schema_ok else None,
     ))
 
     comp_dir = SKILL_ROOT / "competitions" / competition
@@ -212,8 +260,30 @@ def run_checks(
         ))
 
     if workspace:
+        workflow_path = workspace / "state" / "workflow.json"
         decision_path = workspace / "state" / "decision_log.json"
-        if decision_path.is_file():
+        if workflow_path.is_file():
+            ok, value = _load_json(workflow_path)
+            valid = (
+                ok and isinstance(value, dict)
+                and value.get("_schema_version") == "4.0"
+                and value.get("competition") == competition
+                and isinstance(value.get("current_stage"), int)
+                and not isinstance(value.get("current_stage"), bool)
+                and 0 <= value["current_stage"] <= 6
+                and value.get("current_owner") in {"claude", "codex", "user"}
+                and isinstance(value.get("revision"), int)
+                and not isinstance(value.get("revision"), bool)
+                and value["revision"] >= 0
+                and isinstance(value.get("completed_stages"), list)
+                and isinstance(value.get("blocking_issues"), list)
+            )
+            checks.append(_check(
+                "workspace-state",
+                valid,
+                str(workflow_path) if valid else f"invalid v4 state: {value}",
+            ))
+        elif decision_path.is_file():
             ok, value = _load_json(decision_path)
             compliance = value.get("compliance") if isinstance(value, dict) else None
             valid = (
@@ -233,14 +303,14 @@ def run_checks(
             checks.append(_check(
                 "workspace-state",
                 valid,
-                str(decision_path) if valid else f"invalid state: {value}",
+                f"legacy v1 state: {decision_path}" if valid else f"invalid state: {value}",
             ))
         else:
             checks.append(_optional(
                 "workspace-state",
                 False,
-                f"not initialized: {decision_path}",
-                "Start the skill once; the agent will initialize state automatically.",
+                f"not initialized: {workflow_path}",
+                "Run scripts/init_workspace.py for a v2 workspace.",
             ))
 
     if require_modeling:

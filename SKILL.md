@@ -1,261 +1,119 @@
 ---
 name: cumcm-skill
-description: CUMCM 全国大学生数学建模竞赛端到端协作工作流。Use when a user explicitly works on CUMCM (国赛/全国大学生数学建模竞赛) or asks to run/review a CUMCM paper from problem selection through modeling, solving, robustness, writing, compliance, and final submission review. Provides 10 stages, persistent decision state, competition-specific rules/templates, deterministic scoring helpers, numbered decisions, Sciverse academic literature search, multi-Agent parallel solving/writing, and Markdown output. Claude Code only. Do not trigger for generic model selection, ordinary data analysis, or non-CUMCM paper review.
+description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双 Agent 接力工作流。Use when the user explicitly works on CUMCM/国赛 and wants problem intake, mathematical modeling, implementation, result auditing, Markdown paper writing, literature evidence checking, or final review. Coordinates seven file-based stages through a shared workspace: Claude Code handles intake, implementation, writing, and delivery; Codex handles model design and audits. Produces paper.md only. Do not trigger for generic data analysis, ordinary academic writing, or non-CUMCM tasks."
 ---
 
-# cumcm-skill — CUMCM 国赛数学建模工作流 (v1.0)
+# cumcm-skill v2.0
 
-10 阶段把 72 小时的国赛协作变成可恢复、可检查的流程。用户回答关键问题，Agent 维护状态与脚本。每阶段产出经过 rubric 自评、定向精修与跨阶段一致性回检；Stage 8–9 先遵守当届官方规则，再做多视角终审。
+把 CUMCM 项目组织为 **Claude Code 与 Codex 共用同一 Skill、依靠共享文件轮流接力**的 7 阶段流程。聊天记录不是接口；`state/workflow.json`、阶段产物和 handoff 才是接口。
 
-**v1.0**: 基于 [mathmodel-skill](https://github.com/handsomeZR-netizen/mathmodel-skill) (v6.1.0, 原作者: 徐子锐 / handsomeZR-netizen) 深度定制。专精 CUMCM 国赛，Claude Code 独占；Markdown 交付，DOCX/PDF 由用户自行转换；集成 Sciverse MCP 真实文献检索，全阶段可溯源引用；支持多 Agent 并行求解/写作/文献查阅；PackyAPI gpt-image-2 概念图 + Python 数据图双轨图表系统。
+## 不可违反的原则
 
----
+1. **单一真源**：两个宿主应指向同一份 Skill 安装目录，不维护相互复制的独立版本。
+2. **单一 owner**：只有 `current_owner` 可以修改共享状态和产物；另一 Agent 只报告应由谁继续。
+3. **文件化交接**：下一位 Agent 只依赖工作区文件，不要求用户复制上一个聊天的上下文。
+4. **最少设问**：默认扫描用户已放入 `input/` 的题面和附件。只有缺少真正阻断输入或存在多个无法区分的题目版本时，才问一个必要问题。
+5. **职责分离**：Claude偏实践与写作，Codex偏建模推理与审计。任何模型偏离必须显式记录。
+6. **外部能力可选**：Sciverse 文献检索和 PackyAPI 生图不可用时，不阻断无关建模阶段。
+7. **唯一论文交付**：最终交付 `paper.md`；Word/WPS 排版、PDF 转换和当届格式核验由用户完成。
 
-## 平台要求
+## 宿主适配
 
-| 项目 | 说明 |
-|--------------|-----------------------------------------------------|
-| **运行环境** | Claude Code (唯一支持) |
-| **用户交互** | `AskUserQuestion` 工具 |
-| **文献检索** | Sciverse MCP Server (`npx -y sciverse-mcp-server`) |
-| **AI 概念图** | gpt-image-2 (PackyAPI: `POST /v1/images/generations`) |
-| **数据图** | matplotlib / plotly (Python 脚本) |
-| **输出格式** | Markdown (`paper.md` 装配交付) |
-| **状态持久化** | `<cwd>/state/decision_log.json` |
+先判断当前宿主并只加载对应说明：
 
----
+- Codex：`references/runtime/codex.md`
+- Claude Code：`references/runtime/claude_code.md`
 
-## 问答式优先 (Friendly Mode)
+若无法判断，允许用户明确说“以 codex 身份继续”或“以 claude 身份继续”。宿主身份只允许为 `codex` 或 `claude`。
 
-**核心原则**: 用户只需回答**编号问题**，不应被要求手敲 bash / python / json。
+## 启动与恢复
 
-- 离散选项 (选题 / 选模型 / verdict 决策) → **必须**用 `AskUserQuestion`
-- 自由文本 (PDF 路径 / 截止时间) → 单行回复
-- 状态读写 (decision_log.json) → Agent 自动完成
-- 每个 stage 的关键决策点都有 "让我决定 (推荐 X)" 兜底选项
+在用户的建模项目目录执行：
 
----
+1. 查找 `state/workflow.json`。
+2. 不存在时，由 Claude 初始化：
+   `python <skill>/scripts/init_workspace.py <cwd>`
+3. 读取状态：
+   `python <skill>/scripts/workflow.py --workspace <cwd> status`
+4. 检查 `current_owner` 是否等于当前宿主身份。
+5. 若匹配，读取 `active_handoff` 和当前阶段文件；以当前 revision 调用 `workflow.py start`。
+6. 完成本阶段产物、验证、artifact manifest 和 handoff；校验交接单后调用 `workflow.py handoff`。
+7. revision 冲突时停止写入，重新读取状态；不得覆盖另一 Agent 的修改。
 
-## 路径解析协议 (任何阶段必读)
+工作区已有状态时直接恢复，不重复询问题号、队伍人数、成员分工、截止时间或 fast/standard/championship 模式。
 
-| 类型 | 位置 | 例 |
-|------------|----------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
-| skill 内通用 | skill 根目录的相对路径 | `references/stage_05_subproblem_loop.md`, `templates/shared/decision_log.json` |
-| 竞赛特化 | `competitions/cumcm/...` | `competitions/cumcm/winning_patterns.md` |
-| 算法参考 | `references/algorithms/...` | `references/algorithms/01-优化算法说明.md` |
-| 写作规范 | `references/writing/...` | `references/writing/写作规范.md` |
-| 可视化规范 | `references/visualization/...` | `references/visualization/可视化规范.md` |
-| 文献检索 | `references/sciverse_guide.md` | Sciverse MCP 接入指南 |
-| 用户产物 | 用户工作目录的相对路径 | `<cwd>/state/`, `<cwd>/results/`, `<cwd>/figures/`, `<cwd>/paper_workspace/` |
-| state 持久化 | `<cwd>/state/decision_log.json` | 各 stage 必读必写 |
-| 环境变量 | `CUMCM_STATE_DIR`（兼容 `MATHMODEL_STATE_DIR`）/ `CUMCM_COMPETITION`（兼容 `MATHMODEL_COMPETITION`）/ `SCIVERSE_API_TOKEN` / `PACKYAPI_TOKEN` | scripts 路径/竞赛解析与外部服务 |
+## 7 阶段职责
 
-约定: `<skill>/` = skill 安装目录 (`~/.claude/skills/cumcm-skill/`), `<cwd>/` = 用户 cwd。
+| Stage | Owner | 任务 | 阶段文件 |
+|---|---|---|---|
+| 0 | Claude | 题面解析、附件清点、初始框架 | `references/workflow/stage_00_claude_intake.md` |
+| 1 | Codex | 查漏补缺、正式模型、实现契约、文献计划 | `references/workflow/stage_01_codex_modeling.md` |
+| 2 | Claude | 数据处理、代码实现、求解、结果与图表 | `references/workflow/stage_02_claude_implementation.md` |
+| 3 | Codex | 模型—代码—结果一致性与稳健性审计 | `references/workflow/stage_03_codex_audit.md` |
+| 4 | Claude | 基于已验证产物撰写 Markdown 论文 | `references/workflow/stage_04_claude_writing.md` |
+| 5 | Codex | 论文逻辑、数学、结果和文献终审 | `references/workflow/stage_05_codex_final_review.md` |
+| 6 | Claude | 应用修改单并装配最终 `paper.md` | `references/workflow/stage_06_claude_delivery.md` |
 
----
+合法流转和交接格式见 `references/handoff_protocol.md`。Stage 3 不通过退回 Stage 2；Stage 5 不通过退回 Stage 4。
 
-## Quick Start (用户说"开始建模" / "打国赛" / "CUMCM")
+## 共享工作区
 
-```
-1. 一段话介绍 (≤50 字): "CUMCM 国赛建模工作流, 10 阶段 + Sciverse 文献 + 多 Agent 并行, 全程问答式."
-
-2. 收集启动字段；已提供或 state 已记录的字段不再询问，只把尚缺字段合并成一轮 AskUserQuestion:
-   - 题号 (A-F; "未公布"亦可)
-   - 队员数 + 各人擅长 (建模/编程/写作)
-   - 截止时间 (ISO 字符串或 "距现在 X 小时")
-   - 题目 PDF 路径 ("未公布"亦可)
-
-3. **外部服务配置检查 (Agent 自动完成; 首次使用必须, 之后自动跳过)**:
-   - 检查 Sciverse MCP 是否可用: 运行 `claude mcp list` 看是否有 sciverse 条目
-   - 检查两份 key 是否已配置: 读 `~/.claude/settings.json` 的 env 字段是否有 `SCIVERSE_API_TOKEN` 和 `PACKYAPI_TOKEN` (或直接尝试调用对应脚本/工具验证)
-   - 若都就绪 → 跳过; 若缺任一 → 用一轮 AskUserQuestion 请用户提供两份 key:
-     - 用户直接把两个 key 粘给你即可 (README「两份 API key」一节有说明)
-   - 自动配置 (拿到 key 后):
-     - Sciverse MCP 未安装 → 依次运行 `npm install -g sciverse-mcp-server` 和 `claude mcp add -s user sciverse -- sciverse-mcp-server`
-     - 把两个 key 写入 `~/.claude/settings.json` 的 env 字段 (`SCIVERSE_API_TOKEN`, `PACKYAPI_TOKEN`), 保留已有字段
-     - 运行 `claude mcp list` + 一次真实调用验证生效
-   - 首次配置需要用户授权终端命令; key 只写用户本机 settings.json, 不进 state/论文/代码
-
-4. 自动初始化 (Agent 自动完成):
-   - 不存在 `<cwd>/state/decision_log.json` → 创建目录并复制 `<skill>/templates/shared/decision_log.json`
-   - 写入 decision_log.competition = "cumcm"
-   - 已存在 → 读 current_stage 字段决定恢复点
-
-5. 加载 `competitions/cumcm/current_rules.md`，打开其中官方链接核对当届规则；再加载 winning_patterns
-
-6. 进入 Stage 0 (`references/stage_00_kickoff.md`)，若题面未公布则等待
+```text
+<cwd>/
+├── input/                      # 用户放置题面和附件
+├── state/
+│   ├── workflow.json           # 唯一流程状态，schema 4.0
+│   ├── capabilities.json       # 可选能力状态，不含密钥
+│   ├── artifact_manifest.json
+│   └── handoffs/
+├── artifacts/                  # 问题分析、模型规格、实现契约、运行清单
+├── literature/                 # 查询计划、文献库、claim map、笔记
+├── code/
+├── results/
+├── figures/
+├── reviews/
+├── paper_workspace/
+├── paper_draft.md
+└── paper.md
 ```
 
-**已有 state 触发** (用户中途回到 skill):
-```
-1. 读 `<cwd>/state/decision_log.json` 的 current_stage
-2. 若尚未配置过外部服务 (无法确认时先检查一次, 见 Quick Start 第 3 步) → 引导一次性配置
-3. 加载对应 stage_NN.md
-4. 不重复读 winning_patterns
-```
+旧 v1 `state/decision_log.json` 和 10 阶段资料只用于兼容旧项目；v2 新项目以 `workflow.json` 和 `references/workflow/` 为准。
 
----
+## 文献能力：保留但解耦
 
-## 三模式
+读取 `state/capabilities.json`：
 
-| Mode | 上下文策略 | 反馈层 | 用途 |
-|------------|-----------------------------|----------------------|-----------------------|
-| fast | 只保留当前阻断项与最小证据 | L1 单次 | 选题试跑 / sanity check |
-| standard | 按阶段加载并保留决策摘要 | L1+L2 | 默认主流程 |
-| championship | 扩展证据与独立视角 + 多 Agent | L1+L2+L3+L4 + red-team | 提交前最后冲刺 |
+- Codex负责定义查询词、权威来源优先级和需要支撑的 claim；
+- 哪一宿主可用 Sciverse，哪一宿主执行检索并把结果写入 `literature/`；
+- Claude只把已验证文献写入论文；Codex审查元数据、证据等级和 claim 对应关系；
+- 仅有标题或 metadata 的记录不得用来证明实质结论；
+- 优先级：官方政策/国家标准/行业规范 → 国内同行评审期刊 → 场景相关学位论文 → 国内会议或研究报告 → 国外高质量论文 → 普通网页背景材料；
+- 在最终引用前运行 `scripts/validate_literature.py`。
 
-模式自动推荐 (按距 deadline 剩余):
-- > 48h: standard (最后 6h 升 championship)
-- 12-48h: standard
-- 6-12h: fast 关键阶段 + championship 终审
-- < 6h: 直接进 stage 9 (championship)
+Sciverse MCP 不是启动硬依赖。MCP 只能配置到用户全局作用域，禁止创建项目级 `.mcp.json`。不得要求用户把 API key/token 粘进聊天，也不得把凭据写入工作区、日志、论文或交接单。
 
----
+## 图表与可选生图
 
-## 10 阶段索引
+优先级：**Python 数据图 > Mermaid/SVG 技术图 > AI 概念图**。
 
-| # | 阶段 | reference | 时长 | 反馈 | 说明 |
-|---|---------------------------|-------------------------------|----------|-------------|--------------------------------|
-| 0 | 团队启动 + 资料预扫 | `stage_00_kickoff.md` | 1h | L1 | 环境准备、Sciverse 背景调研 |
-| 1 | 选题 (多题对比 → 1) | `stage_01_problem_selection.md` | 2-4h | L1 | 5 维矩阵 + Sciverse 文献辅助 |
-| 2 | 问题深度解析与分解 | `stage_02_analysis.md` | 2-3h | L1 | 子问题拆解 |
-| 3 | 模型选型 | `stage_03_model_selection.md` | 2-4h | L1 + 反事实 | 算法库 + Sciverse 文献验证 |
-| 4 | Foundation (假设+符号+术语) | `stage_04_foundation.md` | 1h | L1 | 假设表 + 符号表 |
-| 5 | **递归子问题循环** | `stage_05_subproblem_loop.md` | 按题目分配 | L1 + 子检查点 | **多 Agent 并行求解** |
-| 6 | 全局灵敏度 / 稳健性 | `stage_06_robustness.md` | 2-3h | L1 + L2 | Tornado 图 |
-| 7 | 模型评价 + 推广 | `stage_07_evaluation.md` | 1-2h | L1 | 优点/缺点/推广 |
-| 8 | 论文写作 + 图表生成 | `stage_08_writing.md` | 12-20h | L1 + L2 | **多 Agent 并行写作 + 双轨图表** |
-| 9 | 提交合规 + Panel | `stage_09_review.md` | 2-6h | L1 + L3 | 规则合规门 + 多视角终审 |
+PackyAPI 默认关闭，只有用户明确要求概念图时才检查能力。AI 图不得承载关键公式、参数、数字或唯一算法说明；不可用时继续使用可复现技术图，不阻断流程。
 
----
+## 加载纪律
 
-## 多 Agent 并行架构
+每次只加载：
 
-在 Stage 5 和 Stage 8 通过 Claude Code `Agent` 工具派发子任务:
+1. 当前 runtime adapter；
+2. `state/workflow.json` 与 `active_handoff`；
+3. 当前阶段文件；
+4. 当前阶段明确需要的算法、写作、可视化或竞赛资料。
 
-### Stage 5 — 求解并行
+不要一次加载全部参考资料。官方规则具有时效性；提交前核验 `competitions/cumcm/current_rules.md` 的核验日期和当届官方原文，官方材料始终覆盖仓库经验。
 
-```
-主 Agent (协调)
-  ├── 求解 Agent 1 → Q1 建模 + 代码 + 结果
-  ├── 求解 Agent 2 → Q2 建模 + 代码 + 结果  
-  ├── 求解 Agent 3 → Q3 建模 + 代码 + 结果
-  └── 文献 Agent   → Sciverse 检索各 Qi 相关文献
-```
+## 完成边界
 
-### Stage 8 — 写作并行
+Stage 6 只能在 `paper.md` 存在后标记完成。可附带：
 
-```
-主 Agent (装配 + 一致性检查)
-  ├── 写作 Agent 1 → §1-4 (问题重述→符号说明)
-  ├── 写作 Agent 2 → §5 (模型建立与求解，主体)
-  ├── 写作 Agent 3 → §6-7 (灵敏度+评价推广)
-  ├── 文献 Agent   → §8 参考文献核验 (Sciverse 溯源)
-  └── 图表 Agent   → 数据图 (matplotlib) + 概念图 (gpt-image-2)
-```
+- `submission_checklist.md`
+- `support_materials_manifest.md`
 
-详细分派协议见 `references/stage_05_subproblem_loop.md` 和 `references/stage_08_writing.md`。
-
----
-
-## 图表系统 (双轨制)
-
-| 图表类型 | 工具 | 格式 | 用途 |
-|----------|----------------------------|------------------|---------------------------------------|
-| **数据图** | matplotlib / plotly (Python) | PNG ≥300 DPI + SVG | 折线图、柱状图、热力图、Tornado、散点等 |
-| **概念图** | gpt-image-2 (PackyAPI) | PNG | 系统架构图、算法流程示意、问题场景图 |
-
-概念图调用封装在 `scripts/generate_concept_image.py`，通过 PackyAPI (`POST /v1/images/generations`) 生成。环境变量 `PACKYAPI_TOKEN` 需提前配置。
-
----
-
-## 加载协议
-
-**只在进入阶段 N 时加载** `references/stage_NN_*.md`。**切勿**一次性全读。
-
-各阶段额外加载:
-- 每阶段开头/结尾: `<cwd>/state/decision_log.json` 必读/必写
-- stage 1-9: `references/rubrics.md` 对应章节 + `references/feedback_layer1_critic.md` (L1 JSON 输出协议, 评分前必读)
-- **stage 1**: `competitions/cumcm/topic_specs.json`
-- **stage 3**: `competitions/cumcm/distilled_naming.md` (按需: 命名变体模板, 与 winning_patterns §4 互补)
-- stage 3, 5: `references/model_catalog.md` + `references/algorithms/` 对应算法
-- **stage 5**: per-Qi 评分后调 `scripts/score_artifact.py --mode aggregate_qi`
-- **stage 0/8/9**: `competitions/cumcm/current_rules.md`
-- **stage 8**: `competitions/cumcm/{winning_patterns, phrase_bank, abstract_template, paper_skeleton}.md`
-- **stage 8** (按需): `competitions/cumcm/distilled_{phrases,structures,formats}.md` (段落/结构/格式模板, 与 phrase_bank/paper_skeleton 互补)
-- **stage 8**: `references/writing/{写作规范, 章节模板, 自审框架}.md`
-- **stage 8**: `references/visualization/{可视化规范, 图表选择与避坑}.md`
-- **stage 8**: `competitions/cumcm/empirical.json` (59 份样本观察分位)
-- **stage 8**: `references/sciverse_guide.md` §Stage_8
-- **stage 9**: `anti_patterns.md` + `rubric_overlay.json` panel personas
-- 触发反馈时: 对应 `references/feedback_layer*.md`
-
----
-
-## 收敛准则
-
-| verdict | 触发 | 行为 |
-|------------------------------|---------------------------------|-----------------------------------|
-| `block` | issues 含 ≥1 high-severity | 暂停, 用户介入 |
-| `pass_early` | raw_min ≥ 9 AND weighted_mean ≥ 9 | iter-1 早退 |
-| `pass` | raw_min ≥ 7 AND weighted_mean ≥ 8 | 进下一阶段 |
-| `pass_with_review` *(stage 5)* | 任 Qi mark_for_review 但加权满足 | 进 stage 6, L2 读 review_qis |
-| `refine` | 其他 | section-patch 精修, iter+=1 (cap 3) |
-| `refine_partial` *(stage 5)* | 任 Qi.min < 7, 其他已 pass | 仅 refine 该 Qi |
-| `carryover` | iter == 3 仍 refine | 进下一阶段, L2 标记 |
-
-`weighted_mean` = Σ(s_i × w_i) / Σ(w_i), 权重来自 `config/dim_weights.json[cumcm][<task_type>]`。
-
----
-
-## 状态持久化
-
-每阶段开头读、结尾写 `<cwd>/state/decision_log.json`。
-
-关键字段 (v3.1 schema):
-- root: `competition`, `task_type`, `mode`, `current_stage`, `budget`, `events`, `compliance`
-- stage_5 扩展: `qi_count`, `qi_weights`, `qi_status`
-- scores 扩展: `weighted_mean`, `review_qis`, `refine_qis`
-- 文献扩展: `sciverse_queries` (检索历史去重)
-
----
-
-## 上下文预算纪律
-
-- L1 Critic 强制 JSON 输出, ~500 token/次
-- 精修策略: section-level patch, 优先只传相关 section
-- references/ 与 competitions/ 文件**懒加载**
-- 阶段完成后, artifact 摘要 + 路径写入 decision_log
-- 多 Agent 并行时，子 Agent 独立上下文，结果通过 decision_log 汇聚
-- 必要时建议 championship → standard → fast 降级
-
----
-
-## 用户指令快捷
-
-- "进入 stage N" / "重做 stage N" → 跳转
-- "升级到 championship" → L3 + L4 + red-team + 多 Agent
-- "切到 fast" → 关闭迭代和多 Agent 并行
-- "回退到 stage M" → 回退 current_stage 并清理 ≥M 节点
-- "做 L2 回检" → 立即触发 cross-stage backtrack
-- "看进度" → 输出 decision_log 摘要 + 当前评分
-- "并行求解" / "串行求解" → 切换 Stage 5 Agent 模式
-
----
-
-## 数据来源声明
-
-- `competitions/cumcm/`: 91 份来源文档，59 份文本提取进入观察分位；非官方阈值
-- `references/model_catalog.md` 跨 task_type 复用
-- `references/algorithms/` 为维护者整理的参考资料
-- Sciverse: MCP 实时检索，`doc_id` + `offset` 可溯源；中文文献覆盖较少
-- gpt-image-2: PackyAPI 中转，概念图/流程图生成
-
----
-
-## 外部资源
-
-- 国赛官方: `dxs.moe.gov.cn` 优秀论文展廊
-- Sciverse: `sciverse.space` (MCP Server, 4.66 亿学术元数据)
-- 概念图: PackyAPI (`packyapi.com`) gpt-image-2
-- 社区: `personqianduixue/Math_Model`, `datawhalechina/intro-mathmodel`
+不得自动宣称字体、页边距、分页、页眉页脚或 PDF 已符合当届要求。最终人工校核、排版、导出和提交责任属于参赛团队。

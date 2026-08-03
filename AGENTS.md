@@ -1,33 +1,39 @@
 # Repository instructions
 
-This repository contains the `cumcm-skill` product. When working inside this repository, act as a maintainer: do not start the ten-stage contest workflow merely because modeling-related files are present.
+This repository contains the `cumcm-skill` product. When maintaining it, do not start a contest run merely because modeling files are present.
 
 ## Sources of truth
 
-- `SKILL.md` defines runtime behavior and trigger boundaries.
-- `references/stage_00_kickoff.md` through `references/stage_09_review.md` contain stage details and must be loaded lazily at runtime.
+- `SKILL.md` defines trigger boundaries and the platform-neutral v2 runtime.
+- `references/runtime/` contains host-specific adapters for Codex and Claude Code.
+- `references/handoff_protocol.md` defines the single-owner, revision-guarded handoff contract.
+- `references/workflow/` contains the seven v2 stages and must be loaded lazily.
+- `templates/shared/workflow_state.json` is the canonical v2 state template.
+- `references/stage_00_kickoff.md` through `stage_09_review.md` and `templates/shared/decision_log.json` are v1 compatibility assets, not the v2 dispatcher.
 - `competitions/cumcm/` contains competition-specific rules, heuristics, overlays, and paper structures.
-- `references/algorithms/` contains 7-category, 58 algorithm references organized by category.
-- `references/writing/` contains writing standards, chapter templates, and self-review frameworks.
-- `references/visualization/` contains visualization standards and figure selection guides.
-- `references/sciverse_guide.md` contains Sciverse MCP integration documentation.
-- `templates/shared/decision_log.json` is the canonical persistent-state template.
+- `references/algorithms/`, `references/writing/`, and `references/visualization/` are reusable domain references.
 
 ## Maintenance rules
 
-- Preserve the trigger boundary: this skill is for CUMCM (国赛) contest work only, not generic data analysis or ordinary paper review.
-- Treat official contest rules as time-sensitive. Keep a verification date and primary source in `competitions/cumcm/current_rules.md`; official current-year material always overrides repository guidance.
-- Treat empirical distributions and `winning_patterns.md` as observations or maintainer heuristics, never official thresholds or award predictors.
-- Keep user artifacts relative to the user's working directory (`state/`, `results/`, `figures/`, `paper_workspace/`). Resolve repository resources relative to the installed skill root.
-- Keep `SKILL.md` concise and dispatch stage-specific detail into `references/`.
-- Do not add runtime claims about awards, token savings, or elapsed time without a reproducible benchmark.
-- When changing behavior, update the README, tests, state schema, and relevant competition docs together.
-- Do not vendor or reintroduce templates, examples, papers, or binary assets without a clear redistribution license.
-- Output format is Markdown (`paper.md`). Do not introduce LaTeX or Pandoc dependencies; DOCX/PDF conversion is the user's responsibility.
+- Preserve the trigger boundary: CUMCM contest work only, not generic analysis or ordinary paper review.
+- Keep the main `SKILL.md` platform neutral. Put Codex- or Claude-specific behavior in runtime adapters.
+- Maintain one physical Skill source. Do not let `.agents/skills` and `.claude/skills` drift as independent copies.
+- Preserve the owner map: Claude stages 0/2/4/6; Codex stages 1/3/5.
+- Shared state changes must use revision guards. Non-owners must not write shared artifacts.
+- Default to workspace discovery and minimal questions. Team size, member skills, deadline, modes, and already-fixed problem numbers are not startup requirements.
+- Sciverse and PackyAPI are optional capabilities. Their absence must not block unrelated stages.
+- All MCP servers must be configured in user/global scope. Never create or edit a project-level `.mcp.json`; migrate and remove one if found.
+- Never put API keys or tokens in state, logs, handoffs, papers, tests, fixtures, or examples.
+- Literature claims require verified content, not title or metadata alone. Preserve Chinese titles in their original language.
+- Treat official contest rules as time-sensitive. Keep a verification date and primary source in `competitions/cumcm/current_rules.md`; official current-year material overrides repository guidance.
+- Treat empirical distributions and `winning_patterns.md` as observations, never official thresholds or award predictors.
+- Keep user artifacts relative to the user's project (`state/`, `artifacts/`, `literature/`, `code/`, `results/`, `figures/`, `reviews/`, `paper_workspace/`).
+- Output is Markdown `paper.md`. Do not add automatic DOCX/PDF delivery or claim final typesetting compliance.
+- Make surgical changes and preserve v1 compatibility unless migration is explicitly requested.
 
 ## Verification
 
-Run the checks proportionate to the change. Before a release, run all of them:
+Before release, run:
 
 ```bash
 python -m compileall -q scripts templates/shared/code_starter
@@ -36,4 +42,4 @@ python scripts/doctor.py --competition cumcm
 git diff --check
 ```
 
-Runtime evaluation prompts should explicitly invoke `$cumcm-skill`. Negative-trigger tests should confirm that generic model-selection and non-CUMCM writing requests do not invoke it.
+Runtime evaluation prompts should explicitly invoke `$cumcm-skill`. Negative-trigger tests should confirm that generic model selection and non-CUMCM writing requests do not invoke it.

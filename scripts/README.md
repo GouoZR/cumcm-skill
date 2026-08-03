@@ -4,6 +4,55 @@
 
 ## 运行时工具
 
+### `init_workspace.py` — 初始化 v2 共享工作区
+
+创建目录、`state/workflow.json`、能力状态、artifact manifest 和空文献库；已存在 workflow 时拒绝覆盖。
+
+```bash
+python scripts/init_workspace.py /path/to/project
+```
+
+### `workflow.py` — 双 Agent 状态流转
+
+所有写操作都必须带刚读取到的 revision：
+
+```bash
+python scripts/workflow.py --workspace /path/to/project status
+python scripts/workflow.py --workspace /path/to/project start \
+  --actor claude --expect-revision 0
+python scripts/workflow.py --workspace /path/to/project handoff \
+  --actor claude --to codex --next-stage 1 \
+  --handoff state/handoffs/H001_claude_to_codex.md \
+  --expect-revision 1 --acceptance passed
+```
+
+### `validate_handoff.py` — 交接单校验
+
+```bash
+python scripts/validate_handoff.py /path/to/handoff.md \
+  --from claude --to codex --next-stage 1
+```
+
+### `validate_literature.py` — 文献证据链校验
+
+拒绝用 metadata-only 或未核验内容支撑实质 claim：
+
+```bash
+python scripts/validate_literature.py \
+  --library /path/to/project/literature/library.json \
+  --claim-map /path/to/project/literature/claim_map.json
+```
+
+### `assemble_paper.py` — Markdown 装配
+
+只生成 `paper.md`，不生成 DOCX/PDF：
+
+```bash
+python scripts/assemble_paper.py \
+  --source /path/to/project/paper_draft.md \
+  --output /path/to/project/paper.md
+```
+
 ### `doctor.py` — 环境与包结构预检
 
 在启动工作流时运行。检查 skill 结构、竞赛包、JSON 配置。
@@ -13,7 +62,7 @@ python scripts/doctor.py --competition cumcm --workspace /path/to/project
 python scripts/doctor.py --competition cumcm --json
 ```
 
-### `score_artifact.py` — L1 Critic 结果处理
+### `score_artifact.py` — v1 兼容的 L1 Critic 结果处理
 
 校验 critique JSON、计算实际 verdict，并把阶段分数与迭代记录写入项目的 `state/decision_log.json`。
 
@@ -78,7 +127,7 @@ python scripts/score_artifact.py \
 - `qi_results[i].issues` — 数组，每条含 `severity`(high/medium/low) + `where` + `fix`，最多 5 条
 - `qi_weights` — 长度必须等于 `qi_results` 数量，默认均匀 `[1.0]*n`
 
-### `extract_diff.py` — 定向修补辅助器
+### `extract_diff.py` — v1 兼容/按需复用的定向修补辅助器
 
 根据 Critic 指出的问题生成 section patch prompt，或应用已经生成的 section patch / unified diff。它的价值是缩小修改范围并保留已通过章节；实际节省量取决于论文和修补范围，不设固定比例。
 

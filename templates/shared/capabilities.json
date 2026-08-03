@@ -1,0 +1,19 @@
+{
+  "_schema_version": "1.0",
+  "literature": {
+    "enabled": true,
+    "preferred_provider": "sciverse",
+    "available_on": [],
+    "status": "not_checked",
+    "language_priority": ["zh-CN", "en"],
+    "blocking_for_modeling": false,
+    "blocking_for_final_citation": true
+  },
+  "concept_image": {
+    "enabled": false,
+    "provider": "packyapi",
+    "available_on": [],
+    "status": "not_checked",
+    "blocking": false
+  }
+}

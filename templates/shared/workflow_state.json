@@ -1,0 +1,16 @@
+{
+  "_schema_version": "4.0",
+  "competition": "cumcm",
+  "run_id": "UNINITIALIZED",
+  "current_stage": 0,
+  "current_owner": "claude",
+  "status": "ready",
+  "revision": 0,
+  "previous_owner": null,
+  "next_owner": "codex",
+  "input_fingerprint": null,
+  "active_handoff": null,
+  "blocking_issues": [],
+  "completed_stages": [],
+  "updated_at": null
+}
