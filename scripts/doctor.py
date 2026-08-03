@@ -91,6 +91,8 @@ def run_checks(
         "templates/shared/capabilities.json",
         "templates/shared/artifact_manifest.json",
         "templates/shared/handoff.md",
+        "templates/shared/subagent_report.md",
+        "templates/shared/final_review.md",
         "templates/shared/decision_log.json",
         "scripts/init_workspace.py",
         "scripts/workflow.py",
@@ -102,6 +104,7 @@ def run_checks(
         "scripts/render_ai_usage.py",
         "templates/shared/ai_usage_ledger.json",
         "references/runtime/codex.md",
+        "references/runtime/codex_subagents.md",
         "references/runtime/claude_code.md",
         "references/handoff_protocol.md",
         *tuple(f"references/workflow/stage_{stage:02d}_{name}.md" for stage, name in (
@@ -198,6 +201,51 @@ def run_checks(
         if workflow_schema_ok else "workflow_state template is not a complete v4.0 state",
         "Restore templates/shared/workflow_state.json before using v2."
         if not workflow_schema_ok else None,
+    ))
+
+    patch_plan_path = SKILL_ROOT / "templates" / "shared" / "final_patch_plan.json"
+    patch_plan = parsed.get(patch_plan_path, {})
+    patch_contract = (
+        patch_plan.get("_patch_item_contract", {})
+        if isinstance(patch_plan, dict)
+        else {}
+    )
+    required_patch_fields = {
+        "id",
+        "target",
+        "severity",
+        "problem",
+        "evidence",
+        "action",
+        "acceptance_check",
+        "status",
+    }
+    patch_plan_schema_ok = (
+        isinstance(patch_plan, dict)
+        and patch_plan.get("_schema_version") == "1.0"
+        and (patch_plan.get("verdict"), patch_plan.get("target_stage"))
+        in {("passed", 6), ("needs_revision", 4)}
+        and isinstance(patch_plan.get("patches"), list)
+        and isinstance(patch_contract, dict)
+        and required_patch_fields.issubset(
+            set(patch_contract.get("required_fields", []))
+        )
+        and {"file", "anchor"}.issubset(
+            set(patch_contract.get("target_required_fields", []))
+        )
+        and set(patch_contract.get("severity_values", []))
+        == {"blocker", "high", "medium", "low"}
+        and {"pending", "applied", "verified"}.issubset(
+            set(patch_contract.get("status_values", []))
+        )
+    )
+    checks.append(_check(
+        "final-patch-plan-schema",
+        patch_plan_schema_ok,
+        "final patch plan schema 1.0 with executable item contract"
+        if patch_plan_schema_ok else "final_patch_plan template lacks the required patch item contract",
+        "Restore templates/shared/final_patch_plan.json with the documented item fields."
+        if not patch_plan_schema_ok else None,
     ))
 
     comp_dir = SKILL_ROOT / "competitions" / competition

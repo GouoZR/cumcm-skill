@@ -76,6 +76,8 @@ class WorkspaceInitializationTests(unittest.TestCase):
             self.assertEqual(state["current_owner"], "claude")
             self.assertTrue(state["input_fingerprint"].startswith("sha256:"))
             self.assertEqual(result["run_id"], state["run_id"])
+            for stage in ("stage_01", "stage_03", "stage_05"):
+                self.assertTrue((workspace / "reviews" / "subagents" / stage).is_dir())
             with self.assertRaises(FileExistsError):
                 init_workspace.initialize(workspace)
 
@@ -212,6 +214,77 @@ class V2PackageTests(unittest.TestCase):
             self.assertIsInstance(metadata["outputs"], list)
         self.assertEqual(stages, list(range(7)))
         self.assertEqual(owners, ["claude", "codex", "claude", "codex", "claude", "codex", "claude"])
+
+    def test_codex_subagent_protocol_is_packaged_and_guarded(self) -> None:
+        protocol = (ROOT / "references" / "runtime" / "codex_subagents.md").read_text(
+            encoding="utf-8"
+        )
+        template = (ROOT / "templates" / "shared" / "subagent_report.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "不修改任何共享文件",
+            "不调用 `workflow.py start`、`handoff` 或 `complete`",
+            "不按票数表决",
+            "confirmed blocker",
+            "国奖级质量目标",
+        ):
+            self.assertIn(required, protocol)
+        for required in (
+            "Reviewed Snapshot",
+            "Scope Conclusion",
+            "no_issue_found|issues_found|insufficient_evidence",
+            "Severity",
+            "Evidence",
+            "Acceptance Check",
+            "未能检查的内容",
+        ):
+            self.assertIn(required, template)
+
+        final_review = (ROOT / "templates" / "shared" / "final_review.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("逐问覆盖与主线", final_review)
+        self.assertIn("Blocker / High 必须修改项", final_review)
+
+        patch_plan = json.loads(
+            (ROOT / "templates" / "shared" / "final_patch_plan.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        contract = patch_plan["_patch_item_contract"]
+        self.assertEqual(patch_plan["_schema_version"], "1.0")
+        self.assertTrue({
+            "id",
+            "target",
+            "severity",
+            "problem",
+            "evidence",
+            "action",
+            "acceptance_check",
+            "status",
+        }.issubset(set(contract["required_fields"])))
+        self.assertTrue({"file", "anchor"}.issubset(set(contract["target_required_fields"])))
+
+        handoff_template = (ROOT / "templates" / "shared" / "handoff.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("SubAgent 审查轨迹", handoff_template)
+        self.assertIn("Rejected findings and reasons", handoff_template)
+        self.assertIn("serial-<role>.md", protocol)
+        self.assertNotIn("Conclusion: `<pass|conditional_pass|fail>`", template)
+
+        stage_roles = {
+            1: "2–4",
+            3: "3–4",
+            5: "3–5",
+        }
+        for stage, expected_fanout in stage_roles.items():
+            path = next((ROOT / "references" / "workflow").glob(f"stage_{stage:02d}_*.md"))
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("references/runtime/codex_subagents.md", text)
+            self.assertIn(expected_fanout, text)
+            self.assertIn(f"reviews/subagents/stage_{stage:02d}/*.md", text)
 
     def test_doctor_accepts_v4_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

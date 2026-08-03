@@ -2,5 +2,33 @@
   "_schema_version": "1.0",
   "verdict": "needs_revision",
   "target_stage": 4,
+  "_patch_item_contract": {
+    "required_fields": [
+      "id",
+      "target",
+      "severity",
+      "problem",
+      "evidence",
+      "action",
+      "acceptance_check",
+      "status"
+    ],
+    "target_required_fields": [
+      "file",
+      "anchor"
+    ],
+    "severity_values": [
+      "blocker",
+      "high",
+      "medium",
+      "low"
+    ],
+    "status_values": [
+      "pending",
+      "applied",
+      "verified",
+      "accepted"
+    ]
+  },
   "patches": []
 }

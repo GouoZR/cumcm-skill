@@ -22,6 +22,9 @@ DIRECTORIES = (
     "results",
     "figures",
     "reviews",
+    "reviews/subagents/stage_01",
+    "reviews/subagents/stage_03",
+    "reviews/subagents/stage_05",
     "paper_workspace",
 )
 

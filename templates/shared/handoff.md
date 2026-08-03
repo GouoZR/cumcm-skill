@@ -23,6 +23,12 @@
 
 - 
 
+## SubAgent 审查轨迹（Codex Stage 1/3/5）
+
+- Adopted reports: `<相对路径；不适用则写“无”>`
+- Rejected findings and reasons: `<finding id + 理由；不适用则写“无”>`
+- Fallback review: `<none|serial-main-agent|not-applicable>`
+
 ## 未解决问题
 
 - 无

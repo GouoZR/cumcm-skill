@@ -16,6 +16,7 @@ description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双
 5. **职责分离**：Claude偏实践与写作，Codex偏建模推理与审计。任何模型偏离必须显式记录。
 6. **外部能力可选**：Sciverse 文献检索和 PackyAPI 生图不可用时，不阻断无关建模阶段。
 7. **唯一论文交付**：最终交付 `paper.md`；Word/WPS 排版、PDF 转换和当届格式核验由用户完成。
+8. **高质量而非奖项承诺**：按可复现、逐问闭环和强证据链的国奖级目标执行，但不保证奖项，不把历史模式当官方阈值。
 
 ## 宿主适配
 
@@ -56,6 +57,8 @@ description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双
 
 合法流转和交接格式见 `references/handoff_protocol.md`。Stage 3 不通过退回 Stage 2；Stage 5 不通过退回 Stage 4。
 
+Codex 在 Stage 1、3、5 内可使用 SubAgent 做独立专家审查，但 `current_owner` 仍为 `codex`。主 Agent 必须亲自完成关键路径、核验证据和最终裁决；按需加载 `references/runtime/codex_subagents.md`，不得新增 SubAgent 状态机。
+
 ## 共享工作区
 
 ```text
@@ -72,6 +75,7 @@ description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双
 ├── results/
 ├── figures/
 ├── reviews/
+│   └── subagents/               # Codex 内部专家报告，不是流程状态
 ├── paper_workspace/
 ├── paper_draft.md
 └── paper.md

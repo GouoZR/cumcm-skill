@@ -54,6 +54,15 @@ python <skill>/scripts/validate_handoff.py <handoff.md> --from <actor> --to <rec
 
 发生回退时，不直接删除历史产物；将受影响产物标为 `stale` 或 `needs_revision`，新版本使用新文件或更新 manifest。
 
+## SubAgent 报告
+
+Codex Stage 1、3、5 的 SubAgent 报告只是审查证据，不是状态真源：
+
+- SubAgent 不拥有工作流阶段，不修改状态、manifest、共享产物或正式 handoff；
+- Codex 主 Agent 核验证据后，将采用的报告保存到 `reviews/subagents/stage_01/`、`stage_03/` 或 `stage_05/`；
+- 正式交接单应列出采用的报告、被驳回发现及理由，以及仍未解决的风险；
+- 阶段结论由主 Agent 按质量门裁决，不按报告数量或多数票决定。
+
 ## 禁止事项
 
 - 依赖复制聊天记录完成交接；

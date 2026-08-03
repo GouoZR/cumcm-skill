@@ -1,19 +1,31 @@
 # 求解审计
 
+## 被审计快照
+
+- Workflow Revision:
+- Run/Result Version:
+- Reproduction Command:
+
 ## 审计结论
 
 - Verdict: `<passed|needs_revision>`
 
-## 模型—代码一致性
+## 主 Agent 独立复核
 
-## 数据与量纲检查
+## SubAgent 报告采用与争议处理
 
-## 结果复现与合理性
+## 模型—代码—结果可追溯性
 
-## 稳健性与边界情况
+## 数据、量纲、约束与泄漏检查
 
-## 图表与结论一致性
+## 独立复跑/复算与合理性
 
-## 必须修改项
+## 基线、稳健性、敏感性与边界情况
+
+## 图表、表格与结论一致性
+
+## Blocker / High 必须修改项
+
+## Medium / Low 风险与限制
 
 ## 可选增强项

@@ -20,7 +20,7 @@ outputs:
 
 ## 执行
 
-1. 逐项应用 `reviews/final_patch_plan.json`，记录完成状态；不得借机更换模型或新增未验证结果。
+1. 先按 `_patch_item_contract` 检查 `reviews/final_patch_plan.json` 的字段、`verdict` 和 `target_stage`，再逐项应用并更新 `status`；字段缺失时退回 Codex，不得猜测，也不得借机更换模型或新增未验证结果。
 2. 检查标题层级、公式、表格、图片相对路径、参考文献、术语、符号和交叉引用。
 3. 生成 `paper.md`；可额外生成 `submission_checklist.md` 与 `support_materials_manifest.md`。
 4. 确认 `paper.md` 存在后调用 `workflow.py complete`。

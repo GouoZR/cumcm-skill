@@ -18,7 +18,7 @@ This repository contains the `cumcm-skill` product. When maintaining it, do not 
 - Preserve the trigger boundary: CUMCM contest work only, not generic analysis or ordinary paper review.
 - Keep the main `SKILL.md` platform neutral. Put Codex- or Claude-specific behavior in runtime adapters.
 - Maintain one physical Skill source. Do not let `.agents/skills` and `.claude/skills` drift as independent copies.
-- Preserve the owner map: Claude stages 0/2/4/6; Codex stages 1/3/5.
+- Preserve the owner map: Claude stages 0/2/4/6; Codex stages 1/3/5. Codex SubAgents are internal read-only reviewers, never workflow owners.
 - Shared state changes must use revision guards. Non-owners must not write shared artifacts.
 - Default to workspace discovery and minimal questions. Team size, member skills, deadline, modes, and already-fixed problem numbers are not startup requirements.
 - Sciverse and PackyAPI are optional capabilities. Their absence must not block unrelated stages.
@@ -26,7 +26,7 @@ This repository contains the `cumcm-skill` product. When maintaining it, do not 
 - Never put API keys or tokens in state, logs, handoffs, papers, tests, fixtures, or examples.
 - Literature claims require verified content, not title or metadata alone. Preserve Chinese titles in their original language.
 - Treat official contest rules as time-sensitive. Keep a verification date and primary source in `competitions/cumcm/current_rules.md`; official current-year material overrides repository guidance.
-- Treat empirical distributions and `winning_patterns.md` as observations, never official thresholds or award predictors.
+- Treat empirical distributions and `winning_patterns.md` as observations, never official thresholds or award predictors. “National-award-level” is a quality target, never a guarantee.
 - Keep user artifacts relative to the user's project (`state/`, `artifacts/`, `literature/`, `code/`, `results/`, `figures/`, `reviews/`, `paper_workspace/`).
 - Output is Markdown `paper.md`. Do not add automatic DOCX/PDF delivery or claim final typesetting compliance.
 - Make surgical changes and preserve v1 compatibility unless migration is explicitly requested.

@@ -3,7 +3,7 @@
 CUMCM 全国大学生数学建模竞赛的 **Codex + Claude Code 双 Agent 文件化接力工作流**。
 
 - Claude Code：题面解析、代码与求解、论文写作、最终 Markdown 装配
-- Codex：查漏补缺、正式建模、求解审计、论文终审
+- Codex：查漏补缺、正式建模、求解审计、论文终审；阶段内部可动态调用 SubAgent 专家
 - 共享接口：`state/workflow.json`、阶段产物和标准 handoff
 - 最终交付：`paper.md`；Word/WPS 排版和 PDF 由用户手工完成
 
@@ -97,6 +97,24 @@ python <skill>/scripts/workflow.py --workspace /path/to/my-cumcm-project status
 
 完整职责见 `references/workflow/`，交接规则见 `references/handoff_protocol.md`。
 
+## Codex 阶段内部专家
+
+Stage 1、3、5 采用“Codex 主 Agent 裁决 + 动态 SubAgent 独立审查”：
+
+```mermaid
+flowchart TB
+  M["Codex 主 Agent：关键路径与最终裁决"]
+  M --> A["模型/数学审查"]
+  M --> B["实现/数值审查"]
+  M --> C["证据/论文审查"]
+  A --> M
+  B --> M
+  C --> M
+  M --> H["正式产物与 handoff"]
+```
+
+SubAgent 默认只读，不修改 `workflow.json`、共享产物或 handoff。主 Agent 独立核验证据，不按多数票决定通过；confirmed blocker 或未闭环 high 问题会触发修订。建议角色和国奖级质量门见 `references/runtime/codex_subagents.md`。这里的“国奖级”指高质量目标，不构成获奖保证。
+
 ## 工作区结构
 
 ```text
@@ -113,6 +131,7 @@ project/
 ├── results/
 ├── figures/
 ├── reviews/
+│   └── subagents/
 ├── paper_workspace/
 ├── paper_draft.md
 └── paper.md
