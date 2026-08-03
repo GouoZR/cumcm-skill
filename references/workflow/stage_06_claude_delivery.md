@@ -29,7 +29,7 @@ outputs:
 
 调用 `workflow.py complete` 前必须逐项确认：
 
-- `final_patch_plan.json` 中每一项 `status` 都是 `applied` 或 `verified`，没有遗留 `pending`；
+- `final_patch_plan.json` 中每一项 `status` 都是 `applied`、`verified` 或 `accepted`，没有遗留 `pending`；其中 `accepted` 仅用于 Stage 5 已明确说明接受理由且无需改动文件的 medium/low 项，不得用来跳过应执行的修改；
 - 全文无占位符、`TODO`、`<...>` 模板残留、伪造引用、未验证数字或凭据；
 - 公式编号、图号、表号、符号和交叉引用全文连续一致，图片相对路径可解析；
 - 正文引用与参考文献一一对应，中文来源保留中文原名；

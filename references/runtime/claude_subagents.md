@@ -43,7 +43,7 @@ Stage 0 和 Stage 6 默认由主 Agent 串行完成：Stage 0 输入量小且需
 
 ### Claude 执行节奏
 
-1. 主 Agent 先冻结 `model_spec`/公共数据口径/绘图样式，再一次性并行派发互不依赖的分区，并在提示中写明独占路径；
+1. 主 Agent 先确认 Codex 已冻结的 `model_spec` 与 `implementation_contract` 版本，再冻结公共数据口径、公共模块接口和绘图样式；随后一次性并行派发互不依赖的分区，并在提示中写明独占路径；
 2. 派发后主 Agent 继续做跨问一致性检查、公共模块维护或写作骨架，不为非阻塞产出空等；
 3. 产出回收后，主 Agent 亲自核验（见下），核验通过才登记 artifact manifest；
 4. 结果已核验或不再需要时关闭 SubAgent，避免遗留并发写入；
@@ -78,4 +78,4 @@ Stage 0 和 Stage 6 默认由主 Agent 串行完成：Stage 0 输入量小且需
 - Stage 2：至少复跑或复算一个决定性结果；核对量纲、数量级、随机种子和跨问变量口径一致；确认图表数字与结果表一致；
 - Stage 4：逐章核对数字、图号、符号与已验证产物一致；核对章节间衔接和风格统一；用 `anti_patterns.md` 做机械检查。
 
-核验不通过的产出退回对应分区重做，或由主 Agent 直接修正后在交接单说明；不得为赶进度而带病登记。并行只是压缩耗时，不降低验收标准。正式落盘、`artifact_manifest.json` 登记、`model_deviations.md`、交接单和 `paper_draft.md` 装配只能由主 Agent 生成。
+核验不通过的产出退回对应分区重做，或由主 Agent 直接修正后在交接单说明；不得为赶进度而带病登记。并行只是压缩耗时，不降低验收标准。SubAgent 只能在独占路径写候选产物；是否纳入正式阶段产物，以及 `artifact_manifest.json` 登记、`model_deviations.md`、交接单和 `paper_draft.md` 装配，只能由主 Agent 决定并执行。

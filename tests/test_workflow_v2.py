@@ -265,6 +265,10 @@ class V2PackageTests(unittest.TestCase):
             "status",
         }.issubset(set(contract["required_fields"])))
         self.assertTrue({"file", "anchor"}.issubset(set(contract["target_required_fields"])))
+        self.assertEqual(
+            set(contract["status_values"]),
+            {"pending", "applied", "verified", "accepted"},
+        )
 
         handoff_template = (ROOT / "templates" / "shared" / "handoff.md").read_text(
             encoding="utf-8"
@@ -303,6 +307,9 @@ class V2PackageTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("references/runtime/claude_subagents.md", adapter)
+        self.assertIn("Codex 已冻结的 `model_spec`", protocol)
+        self.assertNotIn("先冻结 `model_spec`", protocol)
+        self.assertIn("只能在独占路径写候选产物", protocol)
 
         # Stage 2/4 并行产出；Stage 0/6 保持串行，只校验质量门。
         for stage, expected_fanout in {2: "2–4", 4: "3–5"}.items():
@@ -325,6 +332,20 @@ class V2PackageTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("anti_patterns.md", stage_04)
+
+        stage_00 = next((ROOT / "references" / "workflow").glob("stage_00_*.md")).read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("具体起止时刻以当届官方通知为准", stage_00)
+        self.assertIn("不得把赛事总时长直接当作剩余时间", stage_00)
+
+        stage_06 = next((ROOT / "references" / "workflow").glob("stage_06_*.md")).read_text(
+            encoding="utf-8"
+        )
+        for allowed_status in ("`applied`", "`verified`", "`accepted`"):
+            self.assertIn(allowed_status, stage_06)
+        self.assertIn("没有遗留 `pending`", stage_06)
+        self.assertIn("不得用来跳过应执行的修改", stage_06)
 
     def test_doctor_accepts_v4_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
