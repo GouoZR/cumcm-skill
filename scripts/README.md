@@ -28,10 +28,22 @@ python scripts/workflow.py --workspace /path/to/project handoff \
 
 ### `validate_handoff.py` — 交接单校验
 
+除标题完整性外，还拒绝未填写的模板：关键章节不得留 `<...>` 占位或只写“无”；Completed Stage 为 2/4 且来自 claude 时必须填完 SubAgent 轨迹四行。
+
 ```bash
 python scripts/validate_handoff.py /path/to/handoff.md \
   --from claude --to codex --next-stage 1
 ```
+
+### `validate_stage.py` — Stage 2/4/6 程序化预检
+
+`workflow.py` 在 `handoff` 2→3、4→5 和 Stage 6 `complete` 时强制调用；预检失败则命令报错且不修改 `workflow.json`。可单独运行自查，退出码 0 表示通过，输出为 JSON 报告（`errors` 阻断，`warnings` 仅提示）：
+
+```bash
+python scripts/validate_stage.py --workspace /path/to/project --stage 2
+```
+
+只做机械检查（文件存在性、schema、校验和、路径解析、占位符与凭据残留）；数学正确性和结果合理性由 Codex Stage 3/5 审查。
 
 ### `validate_literature.py` — 文献证据链校验
 

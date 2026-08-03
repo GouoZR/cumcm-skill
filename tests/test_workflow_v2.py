@@ -181,7 +181,8 @@ class WorkflowTransitionTests(unittest.TestCase):
             self.assertEqual(moved["status"], "needs_revision")
             self.assertEqual(moved["completed_stages"], [0, 1])
 
-    def test_complete_requires_paper_md(self) -> None:
+    def test_complete_requires_paper_md_and_stage6_preflight(self) -> None:
+        """paper.md 缺失或 Stage 6 预检不过都不能完成；成功路径见 test_stage_preflight。"""
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir)
             init_workspace.initialize(workspace)
@@ -189,12 +190,17 @@ class WorkflowTransitionTests(unittest.TestCase):
             state = workflow.load_state(workspace)
             state.update(current_stage=6, current_owner="claude", status="in_progress", revision=12)
             workflow.atomic_write(state_path, state)
-            with self.assertRaises(workflow.WorkflowError):
+            with self.assertRaises(workflow.WorkflowError) as missing:
                 workflow.complete(workspace, "claude", 12)
+            self.assertIn("paper.md", str(missing.exception))
+
             (workspace / "paper.md").write_text("# Paper\n", encoding="utf-8")
-            completed = workflow.complete(workspace, "claude", 12)
-            self.assertEqual(completed["status"], "complete")
-            self.assertEqual(completed["current_owner"], "user")
+            with self.assertRaises(workflow.WorkflowError) as preflight:
+                workflow.complete(workspace, "claude", 12)
+            self.assertIn("Stage 6 预检失败", str(preflight.exception))
+            # 预检失败不得改状态
+            self.assertEqual(workflow.load_state(workspace)["status"], "in_progress")
+            self.assertEqual(workflow.load_state(workspace)["revision"], 12)
 
 
 class V2PackageTests(unittest.TestCase):

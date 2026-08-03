@@ -78,16 +78,27 @@ def initialize(workspace: Path, competition: str = "cumcm") -> dict[str, object]
     copies = {
         TEMPLATE_ROOT / "capabilities.json": workspace / "state" / "capabilities.json",
         TEMPLATE_ROOT / "artifact_manifest.json": workspace / "state" / "artifact_manifest.json",
+        TEMPLATE_ROOT / "run_manifest.json": workspace / "artifacts" / "run_manifest.json",
         TEMPLATE_ROOT / "literature_library.json": workspace / "literature" / "library.json",
         TEMPLATE_ROOT / "literature_claim_map.json": workspace / "literature" / "claim_map.json",
     }
     for source, destination in copies.items():
         if not destination.exists():
             shutil.copyfile(source, destination)
-    manifest_path = workspace / "state" / "artifact_manifest.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    manifest["run_id"] = run_id
-    write_json(manifest_path, manifest)
+
+    # 只补 run_id/指纹；spec_checksum 等留空，Stage 2 预检会因此拒绝未填写的清单。
+    stamped = {
+        workspace / "state" / "artifact_manifest.json": {"run_id": run_id},
+        workspace / "artifacts" / "run_manifest.json": {
+            "run_id": run_id,
+            "input_fingerprint": fingerprint,
+        },
+    }
+    for path, updates in stamped.items():
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if payload.get("run_id") in (None, "", "UNINITIALIZED"):
+            payload.update(updates)
+            write_json(path, payload)
 
     return {
         "workspace": str(workspace),

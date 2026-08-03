@@ -28,6 +28,14 @@
       "applied",
       "verified",
       "accepted"
+    ],
+    "conditional_fields": {
+      "resolution_note": "status=accepted 时必填，说明为什么不改也可交付"
+    },
+    "notes": [
+      "status=pending 时 Stage 6 无法完成，必须改成 applied/verified/accepted。",
+      "accepted 只允许 severity 为 medium 或 low；blocker 和 high 必须真正修掉。",
+      "applied 表示已改，verified 表示已改且复验通过，accepted 表示确认不改。"
     ]
   },
   "patches": []

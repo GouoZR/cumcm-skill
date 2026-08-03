@@ -126,6 +126,7 @@ project/
 │   ├── artifact_manifest.json
 │   └── handoffs/
 ├── artifacts/
+│   └── run_manifest.json
 ├── literature/
 ├── code/
 ├── results/
@@ -138,6 +139,14 @@ project/
 ```
 
 `revision` 用于防止两个客户端覆盖彼此状态。非当前 owner 不得修改共享产物。
+
+Stage 2、4、6 的完成条件由 `scripts/validate_stage.py` 机械判定，`workflow.py` 在 2→3、4→5 的 `handoff` 和 Stage 6 的 `complete` 处强制执行；预检失败时命令报错且不修改 `workflow.json`。Stage 3→2、5→4 的退回不执行被退回阶段的完成预检。
+
+```text
+python <skill>/scripts/validate_stage.py --workspace <project> --stage <2|4|6>
+```
+
+预检只覆盖文件存在性、schema、校验和一致性、路径解析、占位符与凭据残留。模型正确性、结果合理性和创新性不在其中，由 Codex Stage 3/5 审查。失败条件明细见 `references/handoff_protocol.md`。
 
 ## 文献：可选服务，强证据链
 
@@ -168,7 +177,8 @@ AI 图不得承载唯一的算法说明、关键数字、参数或公式。服�
 |---|---|
 | `scripts/init_workspace.py` | 初始化 v2 工作区，不覆盖已有状态 |
 | `scripts/workflow.py` | owner/revision 守卫、开始、交接、完成 |
-| `scripts/validate_handoff.py` | 校验 Markdown 交接单 |
+| `scripts/validate_handoff.py` | 校验 Markdown 交接单，拒绝未填写的模板 |
+| `scripts/validate_stage.py` | Stage 2/4/6 程序化预检，由 `workflow.py` 强制执行 |
 | `scripts/validate_literature.py` | 校验文献元数据和 claim 证据链 |
 | `scripts/assemble_paper.py` | 从草稿或分节装配 `paper.md`，不生成 PDF |
 | `scripts/doctor.py` | 检查 Skill、竞赛包和 v1/v2 工作区 |

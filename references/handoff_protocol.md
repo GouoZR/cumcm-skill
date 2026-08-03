@@ -42,9 +42,36 @@ python <skill>/scripts/validate_handoff.py <handoff.md> --from <actor> --to <rec
 
 校验通过后再调用 `workflow.py handoff`。交接单中的 revision 是交接前的当前 revision。
 
+`validate_handoff.py` 不只检查标题存在，还拒绝未填写的模板：已完成内容、变更文件、已执行验证、下一位 Agent 任务、验收说明必须有实质内容，写 `<...>` 占位或只写“无”会被判为 `章节未填写` / `章节不得为空占位`。允许显式写“无”的只有已冻结事实与决策、未解决问题、禁止修改的文件。
+
+Completed Stage 为 2 或 4 且 From 为 `claude` 时，还必须填完 `SubAgent 并行产出轨迹` 的四行：`Partitions`、`Main-agent verification`、`Rejected or reworked output`、`Fallback mode`。`Fallback mode` 只能是 `none`、`serial-main-agent` 或 `not-applicable`；填 `none` 表示确实用了 SubAgent，此时 `Partitions` 不得为“无”。没用 SubAgent 就写 `serial-main-agent`，但必须显式写出来。`Main-agent verification` 在 Stage 2/4 不得写“无”。
+
+## 阶段完成预检
+
+Stage 2、4、6 的完成条件由 `scripts/validate_stage.py` 程序化判定，并由 `workflow.py` 强制执行：
+
+```text
+python <skill>/scripts/validate_stage.py --workspace <cwd> --stage <2|4|6>
+```
+
+| 触发点 | 预检阶段 | 失败后果 |
+|---|---|---|
+| `handoff` 2→3 | 2 | 命令失败，`workflow.json` 不变 |
+| `handoff` 4→5 | 4 | 命令失败，`workflow.json` 不变 |
+| `complete`（Stage 6） | 6 | 命令失败，工作流不能标记完成 |
+| `handoff` 3→2、5→4 | 不执行 | 退回不跑被退回阶段的完成预检 |
+
+主要失败条件与修法：
+
+- Stage 2：`artifacts/model_spec.md`、`implementation_contract.md`、`model_deviations.md` 缺失；`artifacts/run_manifest.json` 缺失或未填（`spec_checksum` 为空、`subproblems` 为空）；`run_id` / `input_fingerprint` 与 `workflow.json` 不一致；`spec_checksum` 与 `model_spec.md` 实际哈希不符（改了规格就重算）；子问题缺 `command`、`seed`、`code`、`results` 或 `figures`；声明的文件不存在或为空。
+- Stage 4：`paper_draft.md`、`support_materials_manifest.md` 或 `paper_workspace/*.md` 缺失；正文残留 `TODO` / `FIXME` / `TBD` 或模板占位符；图片相对路径解析不到文件；有标题但正文和子标题都空；正文引用编号在参考文献中没有对应条目；命中凭据模式；引用的图在 manifest 中是 `needs_revision` 或 `stale`。
+- Stage 6：`paper.md` 缺失或为空；`reviews/final_patch_plan.json` 不是 `verdict=passed, target_stage=6`；仍有 `pending` 条目；`blocker` / `high` 被写成 `accepted`；`accepted` 没写 `resolution_note`；`paper.md` 未以 `status=final` 登记到 `state/artifact_manifest.json`。
+
+预检只覆盖机器能可靠判定的内容。模型是否正确、结果是否合理、创新点是否成立不在预检范围内，仍由 Codex Stage 3/5 审查；不得把这些包装成硬验证。
+
 ## 产物状态
 
-`state/artifact_manifest.json` 记录关键产物的路径、生成阶段、owner、输入依赖、校验和与状态。建议状态为：
+`state/artifact_manifest.json` 的每条产物必须有 `path`、`stage`、`owner`、`status`、`sha256`、`inputs`。`path` 为工作区相对路径且文件必须存在，不得重复登记同一路径；`sha256` 写成 `sha256:<64 位小写十六进制>` 且必须与文件实际哈希一致；`stage` 取 0–6，`owner` 取 `claude` / `codex`。状态为：
 
 - `draft`：尚未审计；
 - `verified`：已通过对应审计；
@@ -52,7 +79,9 @@ python <skill>/scripts/validate_handoff.py <handoff.md> --from <actor> --to <rec
 - `stale`：上游规格或输入变化后失效；
 - `final`：Stage 6 装配采用。
 
-发生回退时，不直接删除历史产物；将受影响产物标为 `stale` 或 `needs_revision`，新版本使用新文件或更新 manifest。
+发生回退时，不直接删除历史产物；将受影响产物标为 `stale` 或 `needs_revision`，新版本使用新文件或更新 manifest。`needs_revision` 和 `stale` 的产物不得作为正式交付件：论文引用了这类图会在 Stage 4 预检失败，`paper.md` 必须在 Stage 6 完成前登记为 `final`。
+
+`artifacts/run_manifest.json` 记录本轮求解的可复现信息：`run_id`、`input_fingerprint`、`spec_checksum`（`model_spec.md` 的哈希）、`environment`，以及每个子问题的 `id`、`command`、`seed`、`code`、`results`、`figures`。模板初始化后是空壳，Stage 2 预检会因此拒绝流转，必须真实填写。`seed` 为 `null` 表示该子问题确定性求解。
 
 ## SubAgent 报告
 

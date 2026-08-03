@@ -1,0 +1,27 @@
+{
+  "_schema_version": "1.0",
+  "run_id": "UNINITIALIZED",
+  "input_fingerprint": null,
+  "spec_checksum": null,
+  "environment": "",
+  "model_deviations": "artifacts/model_deviations.md",
+  "_contract": {
+    "spec_checksum": "sha256 of artifacts/model_spec.md at the time the results were produced",
+    "environment": "interpreter and key dependency versions, e.g. 'python 3.12.3; numpy 2.1.0; scipy 1.14.0'",
+    "model_deviations": "workspace-relative path, or null when nothing deviated",
+    "subproblem_required_fields": [
+      "id",
+      "command",
+      "seed",
+      "code",
+      "results",
+      "figures"
+    ],
+    "notes": [
+      "每个子问题至少一个 code、一个 results、一个 figures 条目，全部为工作区相对路径。",
+      "seed 为 null 表示该子问题确定性求解，不使用随机数。",
+      "Stage 2 预检会校验 run_id、input_fingerprint、spec_checksum 与声明文件是否存在。"
+    ]
+  },
+  "subproblems": []
+}

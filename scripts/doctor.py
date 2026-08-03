@@ -90,6 +90,7 @@ def run_checks(
         "templates/shared/workflow_state.json",
         "templates/shared/capabilities.json",
         "templates/shared/artifact_manifest.json",
+        "templates/shared/run_manifest.json",
         "templates/shared/handoff.md",
         "templates/shared/subagent_report.md",
         "templates/shared/final_review.md",
@@ -97,6 +98,7 @@ def run_checks(
         "scripts/init_workspace.py",
         "scripts/workflow.py",
         "scripts/validate_handoff.py",
+        "scripts/validate_stage.py",
         "scripts/validate_literature.py",
         "scripts/assemble_paper.py",
         "scripts/score_artifact.py",
@@ -137,6 +139,7 @@ def run_checks(
         SKILL_ROOT / "templates" / "shared" / "workflow_state.json",
         SKILL_ROOT / "templates" / "shared" / "capabilities.json",
         SKILL_ROOT / "templates" / "shared" / "artifact_manifest.json",
+        SKILL_ROOT / "templates" / "shared" / "run_manifest.json",
         SKILL_ROOT / "templates" / "shared" / "literature_library.json",
         SKILL_ROOT / "templates" / "shared" / "literature_claim_map.json",
         SKILL_ROOT / "templates" / "shared" / "final_patch_plan.json",
@@ -239,6 +242,7 @@ def run_checks(
         and {"pending", "applied", "verified"}.issubset(
             set(patch_contract.get("status_values", []))
         )
+        and "resolution_note" in patch_contract.get("conditional_fields", {})
     )
     checks.append(_check(
         "final-patch-plan-schema",
@@ -247,6 +251,35 @@ def run_checks(
         if patch_plan_schema_ok else "final_patch_plan template lacks the required patch item contract",
         "Restore templates/shared/final_patch_plan.json with the documented item fields."
         if not patch_plan_schema_ok else None,
+    ))
+
+    artifact_manifest_path = SKILL_ROOT / "templates" / "shared" / "artifact_manifest.json"
+    artifact_manifest = parsed.get(artifact_manifest_path, {})
+    artifact_contract = (
+        artifact_manifest.get("_artifact_contract", {})
+        if isinstance(artifact_manifest, dict)
+        else {}
+    )
+    artifact_manifest_schema_ok = (
+        isinstance(artifact_manifest, dict)
+        and isinstance(artifact_contract, dict)
+        and {"path", "stage", "owner", "status", "sha256", "inputs"}.issubset(
+            set(artifact_contract.get("required_fields", []))
+        )
+        and set(artifact_contract.get("status_values", []))
+        == {"draft", "verified", "needs_revision", "stale", "final"}
+        and {"needs_revision", "stale"}.issubset(
+            set(artifact_contract.get("unusable_for_delivery", []))
+        )
+    )
+    checks.append(_check(
+        "artifact-manifest-schema",
+        artifact_manifest_schema_ok,
+        "artifact manifest schema with path/stage/owner/status/sha256/inputs contract"
+        if artifact_manifest_schema_ok
+        else "artifact_manifest template lacks the required artifact contract",
+        "Restore templates/shared/artifact_manifest.json with the documented artifact fields."
+        if not artifact_manifest_schema_ok else None,
     ))
 
     comp_dir = SKILL_ROOT / "competitions" / competition

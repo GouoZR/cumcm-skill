@@ -39,6 +39,28 @@ outputs:
 - 模型偏离已显式记录并说明影响范围；
 - SubAgent 并行不降低验收标准，主 Agent 已核验后才登记 manifest。
 
+## 程序化预检
+
+交接给 Stage 3 前必须通过：
+
+```text
+python <skill>/scripts/validate_stage.py --workspace <cwd> --stage 2
+```
+
+`workflow.py handoff` 在 2→3 时自动执行同一预检，失败则命令报错且 `workflow.json` 不变。常见失败与修法：
+
+| 报错 | 修法 |
+|---|---|
+| `缺少 artifacts/run_manifest.json` | 用模板初始化并填写本轮运行信息 |
+| `run_manifest.spec_checksum 为空` / `与 model_spec.md 不一致` | 重算 `model_spec.md` 的 sha256 填入；规格改过就重填 |
+| `run_manifest.run_id` / `input_fingerprint` 与 workflow.json 不一致 | 对齐 `state/workflow.json` 的值，不要手改指纹掩盖附件变化 |
+| `subproblems 为空` | 每个已实现子问题各登记一条 |
+| 子问题缺 `command` / `seed` / `code` / `results` / `figures` | 补齐；确定性求解写 `"seed": null` |
+| 声明的文件不存在或为空 | 真正跑出结果，或删掉未完成的声明 |
+| manifest 条目 `sha256` 不匹配 / 路径重复 / 路径在工作区外 | 重算校验和，合并重复条目，改成工作区相对路径 |
+
+预检不判断模型是否正确、结果是否合理，这些由 Stage 3 审计。
+
 ## 验收
 
 - 从原始输入可重复生成主要结果；

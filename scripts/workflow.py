@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from validate_handoff import validate_handoff
+from validate_stage import VALIDATORS as STAGE_VALIDATORS, validate_stage
 
 SCHEMA_VERSION = "4.0"
 OWNER_BY_STAGE = {0: "claude", 1: "codex", 2: "claude", 3: "codex", 4: "claude", 5: "codex", 6: "claude"}
@@ -80,6 +81,25 @@ def next_owner_for(stage: int) -> str | None:
     return OWNER_BY_STAGE.get(next_stage) if next_stage is not None else None
 
 
+def require_stage_preflight(workspace: Path, stage: int) -> None:
+    """Block a forward transition until the stage's mechanical checks pass.
+
+    Only Claude-owned stages 2/4/6 have programmatic preflights. Rollbacks
+    (Stage 3→2, 5→4) never run the target stage's completion preflight; the
+    stage runs it again when it moves forward.
+    """
+    if stage not in STAGE_VALIDATORS:
+        return
+    report = validate_stage(workspace, stage)
+    if not report.ok:
+        raise WorkflowError(
+            f"Stage {stage} 预检失败，状态未修改。修复以下问题后重试："
+            + "".join(f"\n  - {item}" for item in report.errors)
+            + f"\n复检命令: python <skill>/scripts/validate_stage.py "
+            f"--workspace {workspace} --stage {stage}"
+        )
+
+
 def start(workspace: Path, actor: str, expected_revision: int) -> dict[str, object]:
     state = load_state(workspace)
     require_revision(state, expected_revision)
@@ -141,6 +161,8 @@ def handoff(
         raise WorkflowError("交接单 Workflow Revision 与当前状态不一致")
     if fields.get("Acceptance") != acceptance:
         raise WorkflowError("交接单 Acceptance 与命令参数不一致")
+    if not is_revision:
+        require_stage_preflight(workspace, current_stage)
 
     completed = [int(value) for value in state.get("completed_stages", []) if isinstance(value, int)]
     if is_revision:
@@ -170,6 +192,7 @@ def complete(workspace: Path, actor: str, expected_revision: int) -> dict[str, o
         raise WorkflowError("只有进行中的 Stage 6 可以完成工作流")
     if not (workspace / "paper.md").is_file():
         raise WorkflowError("完成前必须存在 paper.md")
+    require_stage_preflight(workspace, 6)
     completed = sorted(set([*state.get("completed_stages", []), 6]))
     state.update(
         current_owner="user",

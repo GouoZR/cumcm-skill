@@ -41,6 +41,14 @@ description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双
 6. 完成本阶段产物、验证、artifact manifest 和 handoff；校验交接单后调用 `workflow.py handoff`。
 7. revision 冲突时停止写入，重新读取状态；不得覆盖另一 Agent 的修改。
 
+Stage 2、4、6 有程序化预检，由 `workflow.py` 在前进流转时强制执行，无法绕过：
+
+```text
+python <skill>/scripts/validate_stage.py --workspace <cwd> --stage <2|4|6>
+```
+
+预检不通过时 `handoff`（Stage 2→3、4→5）和 `complete`（Stage 6）直接失败且不修改 `workflow.json`；修好报出的 `errors` 后重试。Stage 3→2、5→4 的退回不跑被退回阶段的完成预检。预检只做机械检查：文件是否存在、schema 是否合法、校验和是否一致、路径能否解析、有无残留占位符或凭据。数学正确性、模型合理性和创新性不在其中，仍由 Codex Stage 3/5 审查。
+
 工作区已有状态时直接恢复，不重复询问题号、队伍人数、成员分工、截止时间或 fast/standard/championship 模式。
 
 ## 7 阶段职责
@@ -70,9 +78,10 @@ description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双
 ├── state/
 │   ├── workflow.json           # 唯一流程状态，schema 4.0
 │   ├── capabilities.json       # 可选能力状态，不含密钥
-│   ├── artifact_manifest.json
+│   ├── artifact_manifest.json  # 产物登记，Stage 2/6 预检校验
 │   └── handoffs/
-├── artifacts/                  # 问题分析、模型规格、实现契约、运行清单
+├── artifacts/                  # 问题分析、模型规格、实现契约
+│   └── run_manifest.json       # 运行清单，Stage 2 预检校验
 ├── literature/                 # 查询计划、文献库、claim map、笔记
 ├── code/
 ├── results/

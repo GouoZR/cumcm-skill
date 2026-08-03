@@ -1,5 +1,31 @@
 {
   "_schema_version": "1.0",
   "run_id": "UNINITIALIZED",
+  "_artifact_contract": {
+    "required_fields": [
+      "path",
+      "stage",
+      "owner",
+      "status",
+      "sha256",
+      "inputs"
+    ],
+    "stage_values": [0, 1, 2, 3, 4, 5, 6],
+    "owner_values": ["claude", "codex"],
+    "status_values": [
+      "draft",
+      "verified",
+      "needs_revision",
+      "stale",
+      "final"
+    ],
+    "unusable_for_delivery": ["needs_revision", "stale"],
+    "notes": [
+      "path 为工作区相对路径，不得重复登记，不得逃出工作区。",
+      "sha256 形如 sha256:<64 位十六进制>，必须与文件当前内容一致。",
+      "inputs 是该产物依赖的工作区相对路径数组，可为空。",
+      "paper.md 在 Stage 6 完成前必须以 status=final 登记。"
+    ]
+  },
   "artifacts": []
 }
