@@ -30,6 +30,97 @@ REQUIRED_HEADINGS = (
 ACTORS = {"claude", "codex"}
 ACCEPTANCE = {"passed", "needs_revision"}
 
+# 允许显式写“无”的章节；其余章节必须有实质内容。
+NULLABLE_HEADINGS = {"已冻结事实与决策", "未解决问题", "禁止修改的文件"}
+SUBSTANTIVE_HEADINGS = tuple(
+    heading for heading in REQUIRED_HEADINGS if heading not in NULLABLE_HEADINGS
+)
+CLAUDE_TRACE_HEADING = "SubAgent 并行产出轨迹"
+CLAUDE_TRACE_STAGES = {2, 4}
+TRACE_FIELDS = (
+    "Partitions",
+    "Main-agent verification",
+    "Rejected or reworked output",
+    "Fallback mode",
+)
+FALLBACK_MODES = {"none", "serial-main-agent", "not-applicable"}
+EMPTY_MARKERS = {"无", "n/a", "na", "none", "-", "—", "待填", "tbd"}
+PLACEHOLDER_LINE = re.compile(r"^<[^>]*>$")
+BULLET_PREFIX = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s*")
+
+
+def _section_bodies(text: str) -> dict[str, str]:
+    """Map each level-2 heading to its raw body text."""
+    matches = list(re.finditer(r"^##[ \t]+(\S.*?)[ \t]*$", text, re.MULTILINE))
+    bodies: dict[str, str] = {}
+    for index, match in enumerate(matches):
+        stop = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        bodies[match.group(1).strip()] = text[match.end():stop]
+    return bodies
+
+
+def _meaningful_items(body: str) -> list[str]:
+    """Bullet/numbered items that are neither empty nor an unfilled placeholder."""
+    items: list[str] = []
+    for raw in body.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        content = BULLET_PREFIX.sub("", line).strip()
+        stripped = content.strip("`").strip()
+        if not stripped or PLACEHOLDER_LINE.fullmatch(stripped):
+            continue
+        # `<路径>`：<用途> 这类整行仍是模板的条目不算已填写。
+        if re.fullmatch(r"<[^>]*>(?:\s*[：:]\s*<[^>]*>)?", stripped):
+            continue
+        items.append(stripped)
+    return items
+
+
+def _check_substance(errors: list[str], bodies: dict[str, str]) -> None:
+    for heading in SUBSTANTIVE_HEADINGS:
+        if heading not in bodies:
+            continue
+        items = _meaningful_items(bodies[heading])
+        if not items:
+            errors.append(f"章节未填写: {heading}")
+            continue
+        if all(item.strip("`").strip().lower() in EMPTY_MARKERS for item in items):
+            errors.append(f"章节不得为空占位: {heading}")
+
+
+def _check_claude_trace(errors: list[str], bodies: dict[str, str]) -> None:
+    heading = next((name for name in bodies if name.startswith(CLAUDE_TRACE_HEADING)), None)
+    if heading is None:
+        errors.append(f"Stage 2/4 交接单必须包含章节: {CLAUDE_TRACE_HEADING}")
+        return
+    found = {
+        match.group(1).strip(): match.group(2).strip().strip("`").strip()
+        for match in re.finditer(
+            r"^-[ \t]+([A-Za-z][A-Za-z -]*?):[ \t]*(.*?)[ \t]*$", bodies[heading], re.MULTILINE
+        )
+    }
+    for field in TRACE_FIELDS:
+        value = found.get(field)
+        if value is None:
+            errors.append(f"SubAgent 轨迹缺少字段: {field}")
+            continue
+        if not value or PLACEHOLDER_LINE.fullmatch(value):
+            errors.append(f"SubAgent 轨迹未填写: {field}")
+
+    fallback = found.get("Fallback mode", "")
+    if fallback and not PLACEHOLDER_LINE.fullmatch(fallback):
+        if fallback not in FALLBACK_MODES:
+            errors.append(
+                f"非法 Fallback mode: {fallback}；只允许 {', '.join(sorted(FALLBACK_MODES))}"
+            )
+        partitions = found.get("Partitions", "")
+        if fallback == "none" and partitions.lower() in EMPTY_MARKERS:
+            errors.append("Fallback mode 为 none 时必须列出实际分区")
+    verification = found.get("Main-agent verification", "")
+    if verification and verification.lower() in EMPTY_MARKERS:
+        errors.append("Stage 2/4 必须记录主 Agent 核验内容，不得写“无”")
+
 
 def validate_handoff(
     path: Path,
@@ -86,6 +177,11 @@ def validate_handoff(
     acceptance = fields.get("Acceptance")
     if acceptance and acceptance not in ACCEPTANCE:
         errors.append(f"非法 Acceptance: {acceptance}")
+
+    bodies = _section_bodies(text)
+    _check_substance(errors, bodies)
+    if parsed.get("Completed Stage") in CLAUDE_TRACE_STAGES and from_actor == "claude":
+        _check_claude_trace(errors, bodies)
 
     return not errors, errors, parsed
 
