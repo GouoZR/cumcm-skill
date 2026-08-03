@@ -286,6 +286,46 @@ class V2PackageTests(unittest.TestCase):
             self.assertIn(expected_fanout, text)
             self.assertIn(f"reviews/subagents/stage_{stage:02d}/*.md", text)
 
+    def test_claude_subagent_protocol_is_packaged_and_guarded(self) -> None:
+        protocol = (ROOT / "references" / "runtime" / "claude_subagents.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "owner 始终仍为 `claude`",
+            "独占路径",
+            "不调用 `workflow.py start`、`handoff` 或 `complete`",
+            "主 Agent 核验",
+            "并行只是压缩耗时，不降低验收标准",
+        ):
+            self.assertIn(required, protocol)
+
+        adapter = (ROOT / "references" / "runtime" / "claude_code.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("references/runtime/claude_subagents.md", adapter)
+
+        # Stage 2/4 并行产出；Stage 0/6 保持串行，只校验质量门。
+        for stage, expected_fanout in {2: "2–4", 4: "3–5"}.items():
+            path = next((ROOT / "references" / "workflow").glob(f"stage_{stage:02d}_*.md"))
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("references/runtime/claude_subagents.md", text)
+            self.assertIn(expected_fanout, text)
+
+        gates = {
+            0: "时间预算与降级阶梯",
+            2: "国奖级实现门",
+            4: "国奖级写作门",
+            6: "国奖级交付门",
+        }
+        for stage, heading in gates.items():
+            path = next((ROOT / "references" / "workflow").glob(f"stage_{stage:02d}_*.md"))
+            self.assertIn(heading, path.read_text(encoding="utf-8"))
+
+        stage_04 = next((ROOT / "references" / "workflow").glob("stage_04_*.md")).read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("anti_patterns.md", stage_04)
+
     def test_doctor_accepts_v4_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir)

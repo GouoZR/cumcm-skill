@@ -18,7 +18,7 @@ This repository contains the `cumcm-skill` product. When maintaining it, do not 
 - Preserve the trigger boundary: CUMCM contest work only, not generic analysis or ordinary paper review.
 - Keep the main `SKILL.md` platform neutral. Put Codex- or Claude-specific behavior in runtime adapters.
 - Maintain one physical Skill source. Do not let `.agents/skills` and `.claude/skills` drift as independent copies.
-- Preserve the owner map: Claude stages 0/2/4/6; Codex stages 1/3/5. Codex SubAgents are internal read-only reviewers, never workflow owners.
+- Preserve the owner map: Claude stages 0/2/4/6; Codex stages 1/3/5. SubAgents on either host are internal helpers, never workflow owners: Codex SubAgents are read-only reviewers (stages 1/3/5); Claude SubAgents produce artifacts under exclusive path partitions (stages 2/4) and their output must be verified by the main agent before it is registered.
 - Shared state changes must use revision guards. Non-owners must not write shared artifacts.
 - Default to workspace discovery and minimal questions. Team size, member skills, deadline, modes, and already-fixed problem numbers are not startup requirements.
 - Sciverse and PackyAPI are optional capabilities. Their absence must not block unrelated stages.

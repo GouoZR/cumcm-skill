@@ -57,7 +57,10 @@ description: "CUMCM 全国大学生数学建模竞赛的 Codex + Claude Code 双
 
 合法流转和交接格式见 `references/handoff_protocol.md`。Stage 3 不通过退回 Stage 2；Stage 5 不通过退回 Stage 4。
 
-Codex 在 Stage 1、3、5 内可使用 SubAgent 做独立专家审查，但 `current_owner` 仍为 `codex`。主 Agent 必须亲自完成关键路径、核验证据和最终裁决；按需加载 `references/runtime/codex_subagents.md`，不得新增 SubAgent 状态机。
+两个宿主都可以在自己的阶段内使用 SubAgent，但 `current_owner` 不变，主 Agent 必须亲自完成关键路径、核验证据和最终裁决，不得新增 SubAgent 状态机：
+
+- Codex 在 Stage 1、3、5 做只读专家审查，按需加载 `references/runtime/codex_subagents.md`；
+- Claude 在 Stage 2、4 按子问题或章节做独占路径并行产出，按需加载 `references/runtime/claude_subagents.md`；Stage 0、6 默认串行。
 
 ## 共享工作区
 

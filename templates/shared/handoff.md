@@ -29,6 +29,13 @@
 - Rejected findings and reasons: `<finding id + 理由；不适用则写“无”>`
 - Fallback review: `<none|serial-main-agent|not-applicable>`
 
+## SubAgent 并行产出轨迹（Claude Stage 2/4）
+
+- Partitions: `<子问题号或章节文件；不适用则写“无”>`
+- Main-agent verification: `<复跑/复算/逐章核对的具体内容；不适用则写“无”>`
+- Rejected or reworked output: `<分区 + 理由；不适用则写“无”>`
+- Fallback mode: `<none|serial-main-agent|not-applicable>`
+
 ## 未解决问题
 
 - 无

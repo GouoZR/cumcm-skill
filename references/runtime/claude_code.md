@@ -18,6 +18,10 @@ Claude Code 在共享工作流中的身份固定为 `claude`，负责 Stage 0、
 - 只有已验证的结果和文献可以进入论文。
 - 若使用内部子 Agent，对共享工作区仍由 `claude` 单一 owner 负责。
 
+## 内部并行
+
+Stage 2 和 Stage 4 工作量最大且天然可按子问题或章节切分。按需加载 `references/runtime/claude_subagents.md`，用独占路径分区并行产出；`current_owner` 仍为 `claude`，主 Agent 亲自核验后才落盘。Stage 0 和 Stage 6 默认串行。不得新增 SubAgent 状态机，不把 SubAgent 写入 `state/workflow.json`。
+
 ## 外部能力
 
 - Sciverse 和 PackyAPI 都是可选增强项，不得阻断无关阶段。

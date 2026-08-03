@@ -106,6 +106,7 @@ def run_checks(
         "references/runtime/codex.md",
         "references/runtime/codex_subagents.md",
         "references/runtime/claude_code.md",
+        "references/runtime/claude_subagents.md",
         "references/handoff_protocol.md",
         *tuple(f"references/workflow/stage_{stage:02d}_{name}.md" for stage, name in (
             (0, "claude_intake"),
